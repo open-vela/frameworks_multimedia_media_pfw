@@ -41,6 +41,22 @@
 #endif
 #define PFW_INFO(...) printf(__VA_ARGS__)
 
+/* Rule pridecates. */
+
+#ifndef LIST_FOREACH
+#define LIST_FOREACH(var, head, field) \
+    for ((var) = LIST_FIRST(head);     \
+         (var) != LIST_END(head);      \
+         (var) = LIST_NEXT(var, field))
+#endif
+
+#ifndef LIST_FOREACH_SAFE
+#define LIST_FOREACH_SAFE(var, head, field, tvar)      \
+    for ((var) = LIST_FIRST(head);                     \
+         (var) && ((tvar) = LIST_NEXT(var, field), 1); \
+         (var) = (tvar))
+#endif
+
 /* Criterion types. */
 
 #define PFW_CRITERION_EXCLUSIVE 1 // Enum, each value has a literal meaning.
