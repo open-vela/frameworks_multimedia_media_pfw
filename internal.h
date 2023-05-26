@@ -57,6 +57,13 @@
          (var) = (tvar))
 #endif
 
+#define PFW_MAXLEN_AMMENDS 512
+
+/* Ammend types. */
+
+#define PFW_AMMEND_RAW 1 // Raw string that does not need ammend.
+#define PFW_AMMEND_CRITERION 2 // Ammend with criterion.
+
 /* Criterion types. */
 
 #define PFW_CRITERION_EXCLUSIVE 1 // Enum, each value has a literal meaning.
@@ -78,6 +85,7 @@
  * Types
  ****************************************************************************/
 
+typedef struct pfw_ammend_t pfw_ammend_t;
 typedef struct pfw_context_t pfw_context_t;
 typedef struct pfw_vector_t pfw_vector_t;
 typedef struct pfw_interval_t pfw_interval_t;
@@ -92,6 +100,21 @@ typedef LIST_HEAD(pfw_listener_list_t, pfw_listener_t)
     pfw_listener_list_t;
 typedef struct pfw_plugin_t pfw_plugin_t;
 typedef struct pfw_system_t pfw_system_t;
+
+/**
+ * @brief pfw_ammend_t
+ *
+ * A raw string, or ammend with other object.
+ *
+ * @see pfw_config_t pfw_act_t
+ */
+struct pfw_ammend_t {
+    int type;
+    union {
+        const char* raw;
+        pfw_criterion_t* criterion;
+    } u;
+};
 
 /**
  * @brief pfw_interval_t is a open interval, used by NumericalCriterion.
@@ -152,11 +175,11 @@ struct pfw_rule_t {
  * @see pfw_action_t pfw_plugin_t
  */
 struct pfw_act_t {
-    const char* params;
     union {
         const char* def;
         pfw_plugin_t* p;
     } plugin;
+    pfw_vector_t* param; // @see pfw_ammend_t
 };
 
 /**
@@ -167,7 +190,8 @@ struct pfw_act_t {
  * @see pfw_domain_t pfw_rule_t pfw_action_t
  */
 struct pfw_config_t {
-    const char* name;
+    char* current;
+    pfw_vector_t* name; // @see pfw_ammend_t
     pfw_rule_t* rules;
     pfw_vector_t* acts;
 };

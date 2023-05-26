@@ -64,6 +64,24 @@ static bool pfw_sanitize_string(pfw_vector_t* names)
     return true;
 }
 
+
+static void pfw_sanitize_ammends(pfw_vector_t* ammends, pfw_system_t* system)
+{
+    pfw_criterion_t* criterion;
+    pfw_ammend_t* ammend;
+    int i;
+
+    for (i = 0; (ammend = pfw_vector_get(ammends, i)); i++) {
+        criterion = pfw_criteria_find(system->criteria, ammend->u.raw);
+        if (criterion) {
+            ammend->type = PFW_AMMEND_CRITERION;
+            ammend->u.criterion = criterion;
+        } else {
+            ammend->type = PFW_AMMEND_RAW;
+        }
+    }
+}
+
 static bool pfw_sanitize_rules(pfw_rule_t* rules, pfw_system_t* system)
 {
     const char* def = rules->criterion.def;
@@ -144,6 +162,7 @@ static bool pfw_sanitize_act(pfw_act_t* act, pfw_system_t* system)
         return false;
     }
 
+    pfw_sanitize_ammends(act->param, system);
     return true;
 }
 
@@ -153,14 +172,16 @@ static bool pfw_sanitize_config(pfw_config_t* config, pfw_domain_t* domain,
     pfw_act_t* act;
     int i;
 
+    pfw_sanitize_ammends(config->name, system);
+
     if (!pfw_sanitize_rules(config->rules, system)) {
-        PFW_DEBUG("Bad rules in config '%s'\n", config->name);
+        PFW_DEBUG("Bad rules in config \n");
         return false;
     }
 
     for (i = 0; (act = pfw_vector_get(config->acts, i)); i++) {
         if (!pfw_sanitize_act(act, system)) {
-            PFW_DEBUG("Bad act in config '%s'\n", config->name);
+            PFW_DEBUG("Bad act in config\n");
             return false;
         }
     }
@@ -173,11 +194,9 @@ static bool pfw_sanitize_domain(pfw_domain_t* domain, pfw_system_t* system)
     pfw_config_t* config;
     int i;
 
-    PFW_SANITIZE_OBJ_NAME(domain->configs, pfw_config_t, name);
-
     for (i = 0; (config = pfw_vector_get(domain->configs, i)); i++) {
         if (!pfw_sanitize_config(config, domain, system)) {
-            PFW_DEBUG("Bad config in domain '%s'\n", domain->name);
+            PFW_DEBUG("Bad %dth config in domain '%s'\n", i, domain->name);
             return false;
         }
     }

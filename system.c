@@ -104,15 +104,77 @@ static bool pfw_plugins_register(pfw_system_t* system,
 }
 
 /**
- * @brief Apply paramters to plugin listeners.
+ * @brief Convert ammends to string.
  */
-static void pfw_apply_act(pfw_act_t* act)
+static void pfw_apply_ammends(pfw_vector_t* ammends, char* res, int len)
 {
-    pfw_listener_t* listener;
+    pfw_criterion_t* criterion;
+    pfw_ammend_t* ammend;
+    int pos = 0, ret, i;
 
-    LIST_FOREACH(listener, &act->plugin.p->listeners, entry)
-    {
-        listener->cb(listener->cookie, act->params);
+    for (i = 0; (ammend = pfw_vector_get(ammends, i)); i++) {
+        criterion = ammend->u.criterion;
+
+        if (ammend->type == PFW_AMMEND_RAW) {
+            ret = snprintf(res + pos, len - pos, "%s",
+                ammend->u.raw);
+        } else if (ammend->u.criterion->type == PFW_CRITERION_NUMERICAL) {
+            ret = snprintf(res + pos, len - pos, "%d",
+                criterion->state);
+        } else {
+            ret = pfw_criterion_itoa(criterion, criterion->state,
+                res + pos, len - pos);
+        }
+
+        if (ret < 0)
+            return;
+
+        pos += ret;
+
+        if (pos >= len)
+            return;
+    }
+}
+
+/**
+ * @brief Check wether apply needed, and update 'current' field.
+ */
+static bool pfw_apply_need(pfw_domain_t* domain, pfw_config_t* config)
+{
+    char buffer[PFW_MAXLEN_AMMENDS];
+    bool apply = false;
+
+    if (domain->current != config) {
+        domain->current = config;
+        apply = true;
+    }
+
+    pfw_apply_ammends(config->name, buffer, sizeof(buffer));
+    if (apply || !config->current || strcmp(config->current, buffer)) {
+        free(config->current);
+        config->current = strdup(buffer);
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * @brief Apply paramter to plugin listeners.
+ */
+static void pfw_apply_acts(pfw_vector_t* action)
+{
+    char buffer[PFW_MAXLEN_AMMENDS];
+    pfw_listener_t* listener;
+    pfw_act_t* act;
+    int i;
+
+    for (i = 0; (act = pfw_vector_get(action, i)); i++) {
+        pfw_apply_ammends(act->param, buffer, sizeof(buffer));
+        LIST_FOREACH(listener, &act->plugin.p->listeners, entry)
+        {
+            listener->cb(listener->cookie, buffer);
+        }
     }
 }
 
@@ -128,23 +190,16 @@ void pfw_apply(void* handle)
     pfw_system_t* system = handle;
     pfw_domain_t* domain;
     pfw_config_t* config;
-    pfw_act_t* act;
-    int i, j, k;
+    int i, j;
 
     if (!system)
         return;
 
     for (i = 0; (domain = pfw_vector_get(system->domains, i)); i++) {
-
         for (j = 0; (config = pfw_vector_get(domain->configs, j)); j++) {
-
             if (pfw_rule_match(config->rules)) {
-                if (domain->current != config) {
-                    for (k = 0; (act = pfw_vector_get(config->acts, k)); k++)
-                        pfw_apply_act(act);
-
-                    domain->current = config;
-                }
+                if (pfw_apply_need(domain, config))
+                    pfw_apply_acts(config->acts);
 
                 break;
             }
@@ -275,7 +330,7 @@ void pfw_dump(void* handle)
     PFW_INFO("%s\n", delim);
     for (i = 0; (domain = pfw_vector_get(system->domains, i)); i++) {
         PFW_INFO("| %-32s | %s\n", domain->name,
-            domain->current ? domain->current->name : "");
+            domain->current ? domain->current->current : "");
     }
 
     PFW_INFO("%s\n", delim);
