@@ -71,6 +71,26 @@ static void pfw_free_rule(pfw_rule_t* rule)
     free(rule);
 }
 
+static void pfw_free_ammends(pfw_vector_t* ammends)
+{
+    pfw_ammend_t* ammend;
+    int i;
+
+    for (i = 0; (ammend = pfw_vector_get(ammends, i)); i++)
+        free(ammend);
+
+    pfw_vector_free(ammends);
+}
+
+static void pfw_free_act(pfw_act_t* act)
+{
+    if (!act)
+        return;
+
+    pfw_free_ammends(act->param);
+    free(act);
+}
+
 static void pfw_free_config(pfw_config_t* config)
 {
     pfw_act_t* act;
@@ -78,9 +98,11 @@ static void pfw_free_config(pfw_config_t* config)
 
     pfw_free_rule(config->rules);
     for (i = 0; (act = pfw_vector_get(config->acts, i)); i++)
-        free(act);
+        pfw_free_act(act);
 
+    pfw_free_ammends(config->name);
     pfw_vector_free(config->acts);
+    free(config->current);
     free(config);
 }
 
@@ -193,7 +215,7 @@ static int pfw_parse_rule(pfw_context_t* ctx, pfw_rule_t** pr, int depth)
 
         /* Parse state. */
 
-        word  = pfw_context_take_word(ctx);
+        word = pfw_context_take_word(ctx);
         if (!word) {
             PFW_DEBUG("Rule has no state\n");
             ret = -EINVAL;
@@ -219,6 +241,33 @@ static int pfw_parse_rule(pfw_context_t* ctx, pfw_rule_t** pr, int depth)
 err:
     pfw_free_rule(rule);
     return ret;
+}
+
+static int pfw_parse_ammends(pfw_context_t* ctx, pfw_vector_t** pv)
+{
+    pfw_ammend_t* ammend;
+    char *word, *saveptr;
+    int ret;
+
+    word = pfw_context_take_line(ctx);
+    if (!word)
+        return -EINVAL;
+
+    word = strtok_r(word, "%", &saveptr);
+    while (word) {
+        ammend = calloc(1, sizeof(pfw_ammend_t));
+        if (!ammend)
+            return -ENOMEM;
+
+        ammend->u.raw = word;
+        ret = pfw_vector_append(pv, ammend);
+        if (ret < 0)
+            return -ENOMEM;
+
+        word = strtok_r(NULL, "%", &saveptr);
+    }
+
+    return 0;
 }
 
 static int pfw_parse_act(pfw_context_t* ctx, pfw_act_t** pa)
@@ -255,12 +304,14 @@ static int pfw_parse_act(pfw_context_t* ctx, pfw_act_t** pa)
 
     /* callback parameters. */
 
-    act->params = pfw_context_take_line(ctx);
+    ret = pfw_parse_ammends(ctx, &act->param);
+    if (ret < 0)
+        goto err;
 
     return 0;
 
 err:
-    free(act);
+    pfw_free_act(act);
     return ret;
 }
 
@@ -289,35 +340,28 @@ static int pfw_parse_config(pfw_context_t* ctx, pfw_config_t** pc)
         return ret;
     }
 
-    word = pfw_context_take_word(ctx);
-    if (!word) {
-        PFW_DEBUG("Conf has no name\n");
-        ret = -EINVAL;
+    ret = pfw_parse_ammends(ctx, &config->name);
+    if (ret < 0)
         return ret;
-    }
 
-    config->name = word;
-    pfw_context_take_line(ctx);
-
-    // rules.
+    /* config rules. */
 
     ret = pfw_parse_rule(ctx, &rule, 2);
     if (ret < 0 && ret != EOF) {
-        PFW_DEBUG("Conf '%s' uses invalid rules\n", config->name);
-        ret = -EINVAL;
-        return ret;
+        PFW_DEBUG("Conf uses invalid rules\n");
+        goto err;
     }
 
     config->rules = rule;
 
-    // acts.
+    /* config acts. */
 
     for (nb = 0;; nb++) {
         ret = pfw_parse_act(ctx, &act);
         if (ret == EOF)
             break;
         else if (ret < 0) {
-            PFW_DEBUG("Conf '%s' uses invalid act\n", config->name);
+            PFW_DEBUG("Conf uses invalid act\n");
             goto err;
         }
 
