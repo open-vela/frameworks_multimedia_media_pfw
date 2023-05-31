@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include "internal.h"
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -116,11 +117,9 @@ static void pfw_apply_ammends(pfw_vector_t* ammends, char* res, int len)
         criterion = ammend->u.criterion;
 
         if (ammend->type == PFW_AMMEND_RAW) {
-            ret = snprintf(res + pos, len - pos, "%s",
-                ammend->u.raw);
+            ret = snprintf(res + pos, len - pos, "%s", ammend->u.raw);
         } else if (ammend->u.criterion->type == PFW_CRITERION_NUMERICAL) {
-            ret = snprintf(res + pos, len - pos, "%d",
-                criterion->state);
+            ret = snprintf(res + pos, len - pos, "%" PRId32, criterion->state);
         } else {
             ret = pfw_criterion_itoa(criterion, criterion->state,
                 res + pos, len - pos);
@@ -321,8 +320,8 @@ void pfw_dump(void* handle)
             pfw_criterion_itoa(criterion, criterion->state, tmp, sizeof(tmp));
         else
             tmp[0] = '\0';
-        PFW_INFO("| %-32s | %-8d | %s\n", (char*)pfw_vector_get(criterion->names, 0),
-            criterion->state, tmp);
+        PFW_INFO("| %-32s | %-8" PRId32 " | %s\n",
+            (char*)pfw_vector_get(criterion->names, 0), criterion->state, tmp);
     }
 
     PFW_INFO("%s\n", delim);
