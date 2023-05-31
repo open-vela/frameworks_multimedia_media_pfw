@@ -24,6 +24,7 @@
 
 #include "internal.h"
 #include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,11 +41,11 @@ static pfw_interval_t* pfw_parse_interval(const char* word)
     if (!itv)
         return NULL;
 
-    if (2 == sscanf(word, "[%d,%d]", &itv->left, &itv->right))
+    if (2 == sscanf(word, "[%" PRId32 ",%" PRId32 "]", &itv->left, &itv->right))
         ;
-    else if (1 == sscanf(word, "[%d,]", &itv->left))
+    else if (1 == sscanf(word, "[%" PRId32 ",]", &itv->left))
         itv->right = INT32_MAX;
-    else if (1 == sscanf(word, "[,%d]", &itv->right))
+    else if (1 == sscanf(word, "[,%" PRId32 "]", &itv->right))
         itv->left = INT32_MIN;
     else
         itv->left = itv->right = strtol(word, NULL, 0);
