@@ -277,6 +277,7 @@ int pfw_criterion_atoi(pfw_criterion_t* criterion,
             return 0;
 
         strncpy(tmp, value, sizeof(tmp));
+        tmp[PFW_CRITERION_MAX_LITERAL - 1] = '\0';
         for (token = strtok_r(tmp, PFW_CRITERION_DELIM, &saveptr); token;
              token = strtok_r(NULL, PFW_CRITERION_DELIM, &saveptr)) {
             ret = pfw_criterion_atoi_atomic(criterion, token, state);
@@ -297,8 +298,8 @@ int pfw_criterion_atoi(pfw_criterion_t* criterion,
 int pfw_criterion_itoa(pfw_criterion_t* criterion,
     int32_t state, char* res, int len)
 {
+    int cnt = 0, i, ret;
     bool first = true;
-    int i, ret;
 
     switch (criterion->type) {
     case PFW_CRITERION_NUMERICAL:
@@ -312,21 +313,23 @@ int pfw_criterion_itoa(pfw_criterion_t* criterion,
         if (state == 0)
             return snprintf(res, len, "%s", PFW_CRITERION_EMPTY);
 
-        for (i = 0; i < 31 && len > 0; i++) {
+        for (i = 0; i < 31; i++) {
             if (!(state & (1 << i)))
                 continue;
 
             ret = pfw_criterion_itoa_atomic(criterion,
-                i, res, len, first);
+                i, res + cnt, len - cnt, first);
             if (ret < 0)
-                return ret;
+                break;
 
             first = false;
-            res += ret;
-            len -= ret;
+            cnt += ret;
+
+            if (cnt >= len)
+                break;
         }
 
-        return ret;
+        return cnt;
     }
 
     return -EINVAL;
