@@ -178,13 +178,11 @@ static int pfw_parse_rule(pfw_context_t* ctx, pfw_rule_t** pr, int depth)
                 break;
             else if (ret < 0) {
                 PFW_DEBUG("Rule branch %d invalid\n", nb);
-                ret = -EINVAL;
                 goto err;
             }
 
             ret = pfw_vector_append(&rule->branches, sub);
             if (ret < 0) {
-                ret = -ENOMEM;
                 goto err;
             }
         }
@@ -262,8 +260,10 @@ static int pfw_parse_ammends(pfw_context_t* ctx, pfw_vector_t** pv)
 
         ammend->u.raw = word;
         ret = pfw_vector_append(pv, ammend);
-        if (ret < 0)
-            return -ENOMEM;
+        if (ret < 0) {
+            free(ammend);
+            return ret;
+        }
 
         word = strtok_r(NULL, "%", &saveptr);
     }
@@ -337,8 +337,7 @@ static int pfw_parse_config(pfw_context_t* ctx, pfw_config_t** pc)
     word = pfw_context_take_word(ctx);
     if (!word || strcmp(word, "conf:")) {
         PFW_DEBUG("Conf start with '%s'\n", word);
-        ret = -EINVAL;
-        return ret;
+        return -EINVAL;;
     }
 
     ret = pfw_parse_ammends(ctx, &config->name);
@@ -367,8 +366,10 @@ static int pfw_parse_config(pfw_context_t* ctx, pfw_config_t** pc)
         }
 
         ret = pfw_vector_append(&config->acts, act);
-        if (ret < 0)
+        if (ret < 0) {
+            pfw_free_act(act);
             goto err;
+        }
     }
 
     return 0;
@@ -424,8 +425,10 @@ static int pfw_parse_domain(pfw_context_t* ctx, pfw_domain_t** pd)
         }
 
         ret = pfw_vector_append(&domain->configs, config);
-        if (ret < 0)
+        if (ret < 0) {
+            pfw_free_config(config);
             goto err;
+        }
     }
 
     return 0;
@@ -518,7 +521,7 @@ static int pfw_parse_criterion(pfw_context_t* ctx, pfw_criterion_t** pc)
 
             ret = pfw_vector_append(&criterion->ranges, itv);
             if (ret < 0) {
-                ret = -ENOMEM;
+                free(itv);
                 goto err;
             }
         } else {
@@ -566,8 +569,13 @@ int pfw_parse_settings(pfw_context_t* ctx, pfw_vector_t** p)
         else if (ret < 0) {
             PFW_DEBUG("Invalid %dth domain\n", nb);
             return ret;
-        } else
-            pfw_vector_append(p, domain);
+        }
+
+        ret = pfw_vector_append(p, domain);
+        if (ret < 0) {
+            pfw_free_domain(domain);
+            return ret;
+        }
     }
 
     return nb;
@@ -596,8 +604,13 @@ int pfw_parse_criteria(pfw_context_t* ctx, pfw_vector_t** p)
         else if (ret < 0) {
             PFW_DEBUG("Invalid %dth criterion\n", nb);
             return ret;
-        } else
-            pfw_vector_append(p, criterion);
+        }
+
+        ret = pfw_vector_append(p, criterion);
+        if (ret < 0) {
+            pfw_free_criterion(criterion);
+            return ret;
+        }
     }
 
     return nb;
