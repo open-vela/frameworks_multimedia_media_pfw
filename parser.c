@@ -337,7 +337,7 @@ static int pfw_parse_config(pfw_context_t* ctx, pfw_config_t** pc)
     word = pfw_context_take_word(ctx);
     if (!word || strcmp(word, "conf:")) {
         PFW_DEBUG("Conf start with '%s'\n", word);
-        return -EINVAL;;
+        return -EINVAL;
     }
 
     ret = pfw_parse_ammends(ctx, &config->name);
