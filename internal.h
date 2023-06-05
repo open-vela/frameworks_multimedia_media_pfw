@@ -230,6 +230,7 @@ struct pfw_listener_t {
  */
 struct pfw_plugin_t {
     char* name;
+    char* parameter;
     pfw_listener_list_t listeners;
 };
 
@@ -248,8 +249,7 @@ struct pfw_system_t {
     pfw_context_t* settings_ctx;
     pfw_vector_t* criteria;
     pfw_vector_t* domains;
-    pfw_plugin_t* plugins;
-    int nb_plugins;
+    pfw_vector_t* plugins;
     pfw_load_t load; // Load criterion state at initilization.
     pfw_save_t save; // Save criterion state when it changes.
 };
@@ -279,6 +279,8 @@ int pfw_parse_settings(pfw_context_t* ctx, pfw_vector_t** p);
 
 bool pfw_sanitize_criteria(pfw_system_t* system);
 bool pfw_sanitize_settings(pfw_system_t* system);
+
+void* pfw_plugin_register(pfw_system_t* system, pfw_plugin_def_t* def);
 
 /* Criterion functions */
 

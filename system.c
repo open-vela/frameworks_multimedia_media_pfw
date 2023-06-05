@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include "internal.h"
+#include <errno.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,20 +35,21 @@
 static void pfw_free_plugins(pfw_system_t* system)
 {
     pfw_listener_t *listener, *tmp;
+    pfw_plugin_t* plugin;
     int i;
 
-    for (i = 0; (i < system->nb_plugins); i++) {
-        pfw_plugin_t* plugin = &system->plugins[i];
-
+    for (i = 0; (plugin = pfw_vector_get(system->plugins, i)); i++) {
         LIST_FOREACH_SAFE(listener, &plugin->listeners, entry, tmp)
         {
             free(listener);
         }
 
+        free(plugin->parameter);
         free(plugin->name);
+        free(plugin);
     }
 
-    free(system->plugins);
+    pfw_vector_free(system->plugins);
 }
 
 /**
@@ -67,41 +69,6 @@ static void* pfw_listener_register(pfw_plugin_t* plugin,
     LIST_INSERT_HEAD(&plugin->listeners, listener, entry);
 
     return listener;
-}
-
-static bool pfw_plugins_register(pfw_system_t* system,
-    pfw_plugin_def_t* defs, int nb)
-{
-    int i, j;
-
-    system->nb_plugins = nb;
-    system->plugins = calloc(nb, sizeof(pfw_plugin_t));
-    if (!system->plugins)
-        return NULL;
-
-    for (i = 0; i < nb; i++) {
-        pfw_plugin_t* plugin = &system->plugins[i];
-        pfw_plugin_def_t* def = &defs[i];
-
-        if (!def->name)
-            return false;
-
-        for (j = 0; j < i; j++) {
-            if (!strcmp(def->name, system->plugins[j].name)) {
-                PFW_DEBUG("Duplicate plugin name %s\n", def->name);
-                return false;
-            }
-        }
-
-        plugin->name = strdup(def->name);
-        if (!plugin->name)
-            return false;
-
-        if (def->cb && !pfw_listener_register(plugin, def->cookie, def->cb))
-            return false;
-    }
-
-    return true;
 }
 
 /**
@@ -174,6 +141,9 @@ static void pfw_apply_acts(pfw_vector_t* action)
         {
             listener->cb(listener->cookie, buffer);
         }
+
+        free(act->plugin.p->parameter);
+        act->plugin.p->parameter = strdup(buffer);
     }
 }
 
@@ -206,6 +176,23 @@ void pfw_apply(void* handle)
     }
 }
 
+int pfw_getparameter(void* handle, const char* name, char* para, int len)
+{
+    pfw_system_t* system = handle;
+    pfw_plugin_t* plugin;
+    int i;
+
+    if (!system || !name || !para)
+        return -EINVAL;
+
+    for (i = 0; (plugin = pfw_vector_get(system->plugins, i)); i++) {
+        if (!strcmp(plugin->name, name))
+            return snprintf(para, len, "%s", plugin->parameter);
+    }
+
+    return -EINVAL;
+}
+
 void* pfw_subscribe(void* handle, const char* name,
     void* cookie, pfw_callback_t cb)
 {
@@ -216,21 +203,17 @@ void* pfw_subscribe(void* handle, const char* name,
     if (!system || !name)
         return NULL;
 
-    for (i = 0; (i < system->nb_plugins); i++) {
-        plugin = &system->plugins[i];
+    for (i = 0; (plugin = pfw_vector_get(system->plugins, i)); i++) {
         if (!strcmp(plugin->name, name))
-            break;
+            return pfw_listener_register(plugin, cookie, cb);
     }
 
-    if (i == system->nb_plugins)
-        return NULL;
-
-    return pfw_listener_register(plugin, cookie, cb);
+    return NULL;
 }
 
-void pfw_unsubscribe(void* handle)
+void pfw_unsubscribe(void* subscriber)
 {
-    pfw_listener_t* listener = handle;
+    pfw_listener_t* listener = subscriber;
 
     if (!listener)
         return;
@@ -239,21 +222,59 @@ void pfw_unsubscribe(void* handle)
     free(listener);
 }
 
+void* pfw_plugin_register(pfw_system_t* system, pfw_plugin_def_t* def)
+{
+    pfw_plugin_t* plugin;
+    int ret = -ENOMEM;
+
+    if (!def || !def->name)
+        return NULL;
+
+    plugin = malloc(sizeof(pfw_plugin_t));
+    if (!plugin)
+        return NULL;
+
+    LIST_INIT(&plugin->listeners);
+    plugin->parameter = NULL;
+    plugin->name = strdup(def->name);
+    if (!plugin->name)
+        goto err1;
+
+    if (def->cb && !pfw_listener_register(plugin, def->cookie, def->cb))
+        goto err2;
+
+    ret = pfw_vector_append(&system->plugins, plugin);
+    if (ret < 0)
+        goto err2;
+
+    return plugin;
+
+err2:
+    free(plugin->name);
+
+err1:
+    free(plugin);
+    return NULL;
+}
+
 void* pfw_create(const char* criteria, const char* settings,
     pfw_plugin_def_t* defs, int nb,
     pfw_load_t load, pfw_save_t save)
 {
     pfw_system_t* system;
+    int i;
 
     system = calloc(1, sizeof(pfw_system_t));
     if (!system)
         return NULL;
 
-    if (!pfw_plugins_register(system, defs, nb))
-        goto err;
-
     system->load = load;
     system->save = save;
+
+    for (i = 0; i < nb; i++) {
+        if (!pfw_plugin_register(system, &defs[i]))
+            goto err;
+    }
 
     /* Parse criteria. */
 
