@@ -64,7 +64,6 @@ static bool pfw_sanitize_string(pfw_vector_t* names)
     return true;
 }
 
-
 static void pfw_sanitize_ammends(pfw_vector_t* ammends, pfw_system_t* system)
 {
     pfw_criterion_t* criterion;
@@ -145,22 +144,30 @@ static bool pfw_sanitize_rules(pfw_rule_t* rules, pfw_system_t* system)
 
 static bool pfw_sanitize_act(pfw_act_t* act, pfw_system_t* system)
 {
-    pfw_plugin_t* plugin;
+    pfw_plugin_t* plugin = NULL;
     int i;
 
-    for (i = 0; (i < system->nb_plugins); i++) {
-        plugin = &system->plugins[i];
-
+    for (i = 0; (plugin = pfw_vector_get(system->plugins, i)); i++) {
         if (!strcmp(act->plugin.def, plugin->name)) {
-            act->plugin.p = plugin;
             break;
         }
     }
 
-    if (i >= system->nb_plugins) {
-        PFW_DEBUG("Act use an invalid plugin '%s'\n", act->plugin.def);
-        return false;
+    /* Auto generate plugin if user doesn't define. */
+
+    if (!plugin) {
+        pfw_plugin_def_t def = {
+            .cb = NULL,
+            .cookie = NULL,
+            .name = act->plugin.def
+        };
+
+        plugin = pfw_plugin_register(system, &def);
+        if (!plugin)
+            return false;
     }
+
+    act->plugin.p = plugin;
 
     pfw_sanitize_ammends(act->param, system);
     return true;

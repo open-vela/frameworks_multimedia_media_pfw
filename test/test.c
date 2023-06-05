@@ -151,6 +151,10 @@ int main(int argc, char* argv[])
             ret = pfw_getstring(handle, arg1, resp, sizeof(resp));
             if (ret >= 0)
                 printf("get %s\n", resp);
+        } else if (!strcmp(cmd, "getparameter")) {
+            ret = pfw_getparameter(handle, arg1, resp, sizeof(resp));
+            if (ret >= 0)
+                printf("%s\n", resp);
         } else if (!strcmp(cmd, "q")) {
             break;
         } else {
