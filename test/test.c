@@ -43,12 +43,23 @@ static void pfw_test_callback(void* cookie, const char* params)
     printf("[%s] id:%d params:%s\n", __func__, (int)(intptr_t)cookie, params);
 }
 
+static void pfw_ffmpeg_command_callback(void* cookie, const char* params)
+{
+    printf("[%s] id:%d params:%s\n", __func__, (int)(intptr_t)cookie, params);
+}
+
+static void pfw_set_parameter_callback(void* cookie, const char* params)
+{
+    printf("[%s] id:%d params:%s\n", __func__, (int)(intptr_t)cookie, params);
+}
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
 static pfw_plugin_def_t plugins[] = {
-    { "test", NULL, pfw_test_callback }
+    { "FFmpegCommand", NULL, pfw_ffmpeg_command_callback },
+    { "SetParameter", NULL, pfw_set_parameter_callback }
 };
 
 static int nb_plugins = sizeof(plugins) / sizeof(plugins[0]);
@@ -75,7 +86,7 @@ int main(int argc, char* argv[])
     pfw_apply(handle);
 
     while (1) {
-        char *cmd, *arg1, *arg2, *saveptr;
+        char *cmd, *arg1, *arg2, *arg3, *saveptr;
         char resp[64];
         int i, res;
 
@@ -92,6 +103,7 @@ int main(int argc, char* argv[])
 
         arg1 = strtok_r(NULL, " \t\n", &saveptr);
         arg2 = strtok_r(NULL, " \t\n", &saveptr);
+        arg3 = strtok_r(NULL, " \t\n", &saveptr);
 
         /* Command handle. */
 
@@ -144,6 +156,9 @@ int main(int argc, char* argv[])
         } else {
             printf("Unkown Command\n");
         }
+
+        if (arg3 && strtol(arg3, NULL, 0) > 0)
+            pfw_apply(handle);
 
         printf("ret %d\n", ret);
         ret = 0;
