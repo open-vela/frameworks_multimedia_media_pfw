@@ -39,7 +39,7 @@ static void pfw_free_plugins(pfw_system_t* system)
     for (i = 0; (i < system->nb_plugins); i++) {
         pfw_plugin_t* plugin = &system->plugins[i];
 
-        LIST_FOREACH_SAFE(listener, &system->plugins->listeners, entry, tmp)
+        LIST_FOREACH_SAFE(listener, &plugin->listeners, entry, tmp)
         {
             free(listener);
         }
