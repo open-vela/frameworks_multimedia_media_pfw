@@ -23,4 +23,16 @@ include $(APPDIR)/Make.defs
 CSRCS += $(wildcard *.c)
 CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" include}
 
+ASRCS := $(wildcard $(ASRCS))
+CSRCS := $(wildcard $(CSRCS))
+CXXSRCS := $(wildcard $(CXXSRCS))
+MAINSRC := $(wildcard $(MAINSRC))
+NOEXPORTSRCS = $(ASRCS)$(CSRCS)$(CXXSRCS)$(MAINSRC)
+
+ifneq ($(NOEXPORTSRCS),)
+BIN := $(APPDIR)/staging/libframework.a
+endif
+
+EXPORT_FILES := include
+
 include $(APPDIR)/Application.mk
