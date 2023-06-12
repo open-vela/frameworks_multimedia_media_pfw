@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
     pfw_apply(handle);
 
     while (1) {
-        char *cmd, *arg1, *arg2, *arg3, *saveptr;
+        char *cmd, *arg1, *arg2, *arg3, *saveptr, *dump;
         char resp[64];
         int i, res;
 
@@ -130,7 +130,9 @@ int main(int argc, char* argv[])
         } else if (!strcmp(cmd, "apply")) {
             pfw_apply(handle);
         } else if (!strcmp(cmd, "dump")) {
-            pfw_dump(handle);
+            dump = pfw_dump(handle);
+            printf("\n%s\n", dump);
+            free(dump);
         } else if (!strcmp(cmd, "setint")) {
             ret = pfw_setint(handle, arg1, strtol(arg2, NULL, 0));
         } else if (!strcmp(cmd, "setstring")) {

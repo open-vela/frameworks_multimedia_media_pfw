@@ -53,7 +53,7 @@ void* pfw_create(const char* criteria, const char* settings,
     pfw_plugin_def_t* defs, int nb, pfw_load_t load, pfw_save_t save);
 void pfw_apply(void* handle);
 void pfw_destroy(void* handle);
-void pfw_dump(void* handle);
+char* pfw_dump(void* handle);
 
 /* Subscribe plugin. */
 
