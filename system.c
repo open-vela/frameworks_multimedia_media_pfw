@@ -320,38 +320,3 @@ void pfw_destroy(void* handle)
         free(system);
     }
 }
-
-void pfw_dump(void* handle)
-{
-    const char* delim = "+-------------------------------------------------------------";
-    pfw_system_t* system = handle;
-    pfw_criterion_t* criterion;
-    pfw_domain_t* domain;
-    char tmp[64];
-    int i;
-
-    if (!system)
-        return;
-
-    PFW_INFO("%s\n", delim);
-    PFW_INFO("| %-32s | %-8s | %s\n", "CRITERIA", "STATE", "VALUE");
-    PFW_INFO("%s\n", delim);
-    for (i = 0; (criterion = pfw_vector_get(system->criteria, i)); i++) {
-        if (criterion->type != PFW_CRITERION_NUMERICAL)
-            pfw_criterion_itoa(criterion, criterion->state, tmp, sizeof(tmp));
-        else
-            tmp[0] = '\0';
-        PFW_INFO("| %-32s | %-8" PRId32 " | %s\n",
-            (char*)pfw_vector_get(criterion->names, 0), criterion->state, tmp);
-    }
-
-    PFW_INFO("%s\n", delim);
-    PFW_INFO("| %-32s | %s\n", "DOMAIN", "CONFIG");
-    PFW_INFO("%s\n", delim);
-    for (i = 0; (domain = pfw_vector_get(system->domains, i)); i++) {
-        PFW_INFO("| %-32s | %s\n", domain->name,
-            domain->current ? domain->current->current : "");
-    }
-
-    PFW_INFO("%s\n", delim);
-}
