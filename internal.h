@@ -39,7 +39,6 @@
 #else
 #define PFW_DEBUG(...)
 #endif
-#define PFW_INFO(...) printf(__VA_ARGS__)
 
 /* Rule pridecates. */
 
