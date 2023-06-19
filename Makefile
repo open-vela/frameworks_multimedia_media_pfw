@@ -21,7 +21,7 @@
 include $(APPDIR)/Make.defs
 
 CSRCS += $(wildcard *.c)
-CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" include}
+CFLAGS += ${INCDIR_PREFIX}include
 
 ASRCS := $(wildcard $(ASRCS))
 CSRCS := $(wildcard $(CSRCS))
