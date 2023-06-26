@@ -121,8 +121,8 @@ char* pfw_dump(void* handle)
     pfw_criterion_t* criterion;
     pfw_buffer_t* buf = NULL;
     pfw_domain_t* domain;
+    char* res = NULL;
     char tmp[64];
-    char* res;
     int i;
 
     if (!system)
