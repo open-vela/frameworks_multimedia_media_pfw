@@ -128,6 +128,8 @@ char* pfw_dump(void* handle)
     if (!system)
         return NULL;
 
+    pthread_mutex_lock(&system->mutex);
+
     pfw_empty_line(&buf);
     pfw_buffer_printf(&buf, "| %-32s | %-8s | %s\n", "CRITERIA", "STATE", "VALUE");
     pfw_empty_line(&buf);
@@ -150,5 +152,8 @@ char* pfw_dump(void* handle)
 
     pfw_empty_line(&buf);
     pfw_buffer_free(buf, &res);
+
+    pthread_mutex_unlock(&system->mutex);
+
     return res;
 }

@@ -60,7 +60,7 @@ char* pfw_dump(void* handle);
 int pfw_getparameter(void* handle, const char* name, char* para, int len);
 void* pfw_subscribe(void* handle, const char* name,
     void* cookie, pfw_callback_t cb);
-void pfw_unsubscribe(void* subscriber);
+void pfw_unsubscribe(void* handle, void* subscriber);
 
 /* Criterion modify. */
 

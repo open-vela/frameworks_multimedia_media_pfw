@@ -164,6 +164,7 @@ void pfw_apply(void* handle)
     if (!system)
         return;
 
+    pthread_mutex_lock(&system->mutex);
     for (i = 0; (domain = pfw_vector_get(system->domains, i)); i++) {
         for (j = 0; (config = pfw_vector_get(domain->configs, j)); j++) {
             if (pfw_rule_match(config->rules)) {
@@ -174,51 +175,64 @@ void pfw_apply(void* handle)
             }
         }
     }
+    pthread_mutex_unlock(&system->mutex);
 }
 
 int pfw_getparameter(void* handle, const char* name, char* para, int len)
 {
     pfw_system_t* system = handle;
     pfw_plugin_t* plugin;
-    int i;
+    int i, ret = -EINVAL;
 
     if (!system || !name || !para)
-        return -EINVAL;
+        return ret;
 
+    pthread_mutex_lock(&system->mutex);
     for (i = 0; (plugin = pfw_vector_get(system->plugins, i)); i++) {
-        if (!strcmp(plugin->name, name))
-            return snprintf(para, len, "%s", plugin->parameter);
+        if (!strcmp(plugin->name, name)) {
+            ret = snprintf(para, len, "%s", plugin->parameter);
+            break;
+        }
     }
+    pthread_mutex_unlock(&system->mutex);
 
-    return -EINVAL;
+    return ret;
 }
 
 void* pfw_subscribe(void* handle, const char* name,
     void* cookie, pfw_callback_t cb)
 {
     pfw_system_t* system = handle;
+    void* listener = NULL;
     pfw_plugin_t* plugin;
     int i;
 
     if (!system || !name)
         return NULL;
 
+    pthread_mutex_lock(&system->mutex);
     for (i = 0; (plugin = pfw_vector_get(system->plugins, i)); i++) {
-        if (!strcmp(plugin->name, name))
-            return pfw_listener_register(plugin, cookie, cb);
+        if (!strcmp(plugin->name, name)) {
+            listener = pfw_listener_register(plugin, cookie, cb);
+            break;
+        }
     }
+    pthread_mutex_unlock(&system->mutex);
 
-    return NULL;
+    return listener;
 }
 
-void pfw_unsubscribe(void* subscriber)
+void pfw_unsubscribe(void* handle, void* subscriber)
 {
+    pfw_system_t* system = handle;
     pfw_listener_t* listener = subscriber;
 
     if (!listener)
         return;
 
+    pthread_mutex_lock(&system->mutex);
     LIST_REMOVE(listener, entry);
+    pthread_mutex_unlock(&system->mutex);
     free(listener);
 }
 
@@ -300,6 +314,7 @@ void* pfw_create(const char* criteria, const char* settings,
     if (!pfw_sanitize_settings(system))
         goto err;
 
+    pthread_mutex_init(&system->mutex, NULL);
     return system;
 
 err:
@@ -317,6 +332,7 @@ void pfw_destroy(void* handle)
         pfw_free_criteria(system->criteria);
         pfw_free_settings(system->domains);
         pfw_free_plugins(system);
+        pthread_mutex_destroy(&system->mutex);
         free(system);
     }
 }

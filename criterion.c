@@ -357,19 +357,23 @@ int pfw_setint(void* handle, const char* name, int value)
 {
     pfw_system_t* system = handle;
     pfw_criterion_t* criterion;
+    int ret = -EINVAL;
 
     if (!system || !name)
-        return -EINVAL;
+        return ret;
 
     criterion = pfw_criteria_find(system->criteria, name);
     if (!criterion)
-        return -EINVAL;
+        return ret;
 
-    if (!pfw_criterion_check_integer(criterion, value))
-        return -EINVAL;
+    pthread_mutex_lock(&system->mutex);
+    if (pfw_criterion_check_integer(criterion, value)) {
+        pfw_criterion_set(handle, criterion, value);
+        ret = 0;
+    }
+    pthread_mutex_unlock(&system->mutex);
 
-    pfw_criterion_set(handle, criterion, value);
-    return 0;
+    return ret;
 }
 
 int pfw_setstring(void* handle, const char* name, const char* value)
@@ -386,11 +390,12 @@ int pfw_setstring(void* handle, const char* name, const char* value)
     if (!criterion)
         return -EINVAL;
 
+    pthread_mutex_lock(&system->mutex);
     ret = pfw_criterion_atoi(criterion, value, &state);
-    if (ret < 0)
-        return -EINVAL;
+    if (ret >= 0)
+        pfw_criterion_set(handle, criterion, state);
+    pthread_mutex_unlock(&system->mutex);
 
-    pfw_criterion_set(handle, criterion, state);
     return 0;
 }
 
@@ -426,7 +431,10 @@ int pfw_reset(void* handle, const char* name)
     if (!criterion)
         return -EINVAL;
 
+    pthread_mutex_lock(&system->mutex);
     pfw_criterion_set(handle, criterion, criterion->init.v);
+    pthread_mutex_unlock(&system->mutex);
+
     return 0;
 }
 
@@ -444,7 +452,10 @@ int pfw_getint(void* handle, const char* name, int* value)
     if (!criterion)
         return -EINVAL;
 
+    pthread_mutex_lock(&system->mutex);
     *value = criterion->state;
+    pthread_mutex_unlock(&system->mutex);
+
     return 0;
 }
 
@@ -452,6 +463,7 @@ int pfw_getstring(void* handle, const char* name, char* value, int len)
 {
     pfw_system_t* system = handle;
     pfw_criterion_t* criterion;
+    int ret;
 
     if (!system || !name || !value)
         return -EINVAL;
@@ -463,7 +475,11 @@ int pfw_getstring(void* handle, const char* name, char* value, int len)
     if (criterion->type == PFW_CRITERION_NUMERICAL)
         return -EPERM;
 
-    return pfw_criterion_itoa(criterion, criterion->state, value, len);
+    pthread_mutex_lock(&system->mutex);
+    ret = pfw_criterion_itoa(criterion, criterion->state, value, len);
+    pthread_mutex_unlock(&system->mutex);
+
+    return ret;
 }
 
 int pfw_contain(void* handle, const char* name, const char* value,
@@ -484,10 +500,11 @@ int pfw_contain(void* handle, const char* name, const char* value,
     if (criterion->type != PFW_CRITERION_INCLUSIVE)
         return -EPERM;
 
+    pthread_mutex_lock(&system->mutex);
     ret = pfw_criterion_atoi(criterion, value, &state);
-    if (ret < 0)
-        return -EINVAL;
+    if (ret >= 0)
+        *contain = !!(criterion->state & state);
+    pthread_mutex_unlock(&system->mutex);
 
-    *contain = !!(criterion->state & state);
     return ret;
 }
