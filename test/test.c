@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
             if (i < 0 || i >= PFW_SUBSCRIBERS_MAX || !subscribers[i]) {
                 ret = -EINVAL;
             } else {
-                pfw_unsubscribe(subscribers[i]);
+                pfw_unsubscribe(system, subscribers[i]);
             }
         } else if (!strcmp(cmd, "apply")) {
             pfw_apply(handle);

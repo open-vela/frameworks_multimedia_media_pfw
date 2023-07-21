@@ -26,6 +26,7 @@
  ****************************************************************************/
 
 #include "pfw.h"
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/queue.h>
@@ -251,6 +252,7 @@ struct pfw_system_t {
     pfw_vector_t* plugins;
     pfw_load_t load; // Load criterion state at initilization.
     pfw_save_t save; // Save criterion state when it changes.
+    pthread_mutex_t mutex;
 };
 
 /****************************************************************************
