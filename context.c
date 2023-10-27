@@ -133,7 +133,7 @@ pfw_context_t* pfw_context_create(const char* filename)
     FILE* file;
 
     // read file
-    file = fopen(filename, "r");
+    file = fopen(filename, "re");
     if (!file)
         return NULL;
 
