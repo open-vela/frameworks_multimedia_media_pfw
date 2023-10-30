@@ -1,0 +1,4 @@
+.built
+.depend
+Make.dep
+*.o
