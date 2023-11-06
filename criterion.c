@@ -341,6 +341,9 @@ pfw_criterion_t* pfw_criteria_find(pfw_vector_t* criteria, const char* target)
     const char* name;
     int i, j;
 
+    if (!target)
+        return NULL;
+
     for (i = 0; (criterion = pfw_vector_get(criteria, i)); i++) {
         for (j = 0; (name = pfw_vector_get(criterion->names, j)); j++) {
             if (!strcmp(target, name))
