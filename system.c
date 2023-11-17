@@ -282,6 +282,8 @@ void* pfw_create(const char* criteria, const char* settings,
     if (!system)
         return NULL;
 
+    pthread_mutex_init(&system->mutex, NULL);
+
     system->load = load;
     system->save = save;
 
@@ -314,7 +316,6 @@ void* pfw_create(const char* criteria, const char* settings,
     if (!pfw_sanitize_settings(system))
         goto err;
 
-    pthread_mutex_init(&system->mutex, NULL);
     return system;
 
 err:
