@@ -27,6 +27,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 
 /****************************************************************************
  * Private Functions
@@ -168,9 +169,10 @@ void pfw_apply(void* handle)
     for (i = 0; (domain = pfw_vector_get(system->domains, i)); i++) {
         for (j = 0; (config = pfw_vector_get(domain->configs, j)); j++) {
             if (pfw_rule_match(config->rules)) {
-                if (pfw_apply_need(domain, config))
+                if (pfw_apply_need(domain, config)) {
+                    syslog(LOG_INFO, "pfw domain:%s switch to conf:%s\n", domain->name, config->current);
                     pfw_apply_acts(config->acts);
-
+                }
                 break;
             }
         }
