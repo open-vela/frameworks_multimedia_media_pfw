@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
     int ret = 0;
 
     handle = pfw_create("./criteria.conf", "./settings.conf",
-        plugins, nb_plugins, NULL, NULL);
+        plugins, nb_plugins, NULL, NULL, NULL);
     if (!handle) {
         printf("\n");
         return 0;
@@ -170,6 +170,6 @@ int main(int argc, char* argv[])
         ret = 0;
     }
 
-    pfw_destroy(handle);
+    pfw_destroy(handle, NULL);
     return 0;
 }

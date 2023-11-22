@@ -252,7 +252,9 @@ struct pfw_system_t {
     pfw_vector_t* plugins;
     pfw_load_t load; // Load criterion state at initilization.
     pfw_save_t save; // Save criterion state when it changes.
+    pfw_release_t release_cb;
     pthread_mutex_t mutex;
+    void *cookie;
 };
 
 /****************************************************************************

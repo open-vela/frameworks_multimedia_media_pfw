@@ -150,7 +150,7 @@ pfw_criterion_set(void* handle, pfw_criterion_t* criterion, int32_t state)
     if (criterion->state != state) {
         criterion->state = state;
         if (system->save)
-            system->save(pfw_vector_get(criterion->names, 0), state);
+            system->save(system->cookie, pfw_vector_get(criterion->names, 0), state);
     }
 }
 
