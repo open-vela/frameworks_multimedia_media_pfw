@@ -221,7 +221,7 @@ static bool pfw_sanitize_criterion(pfw_criterion_t* criterion, pfw_system_t* sys
 
     criterion->state = criterion->init.v;
     if (system->load)
-        system->load(pfw_vector_get(criterion->names, 0), &criterion->state);
+        system->load(system->cookie, pfw_vector_get(criterion->names, 0), &criterion->state);
 
     if (criterion->type != PFW_CRITERION_NUMERICAL
         && !pfw_sanitize_string(criterion->ranges)) {
