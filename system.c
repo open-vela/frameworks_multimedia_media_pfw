@@ -274,8 +274,8 @@ err1:
 }
 
 void* pfw_create(const char* criteria, const char* settings,
-    pfw_plugin_def_t* defs, int nb,
-    pfw_load_t load, pfw_save_t save)
+    pfw_plugin_def_t* defs, int nb, pfw_load_t load,
+    pfw_save_t save, void *cookie)
 {
     pfw_system_t* system;
     int i;
@@ -288,6 +288,7 @@ void* pfw_create(const char* criteria, const char* settings,
 
     system->load = load;
     system->save = save;
+    system->cookie = cookie;
 
     for (i = 0; i < nb; i++) {
         if (!pfw_plugin_register(system, &defs[i]))
@@ -321,15 +322,18 @@ void* pfw_create(const char* criteria, const char* settings,
     return system;
 
 err:
-    pfw_destroy(system);
+    pfw_destroy(system, system->release_cb);
     return NULL;
 }
 
-void pfw_destroy(void* handle)
+void pfw_destroy(void* handle, void *release_cb)
 {
     pfw_system_t* system = handle;
+    system->release_cb = release_cb;
 
     if (system) {
+        if (system->release_cb)
+            system->release_cb(system->cookie);
         pfw_context_destroy(system->criteria_ctx);
         pfw_context_destroy(system->settings_ctx);
         pfw_free_criteria(system->criteria);

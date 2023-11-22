@@ -36,8 +36,9 @@ extern "C" {
  ****************************************************************************/
 
 typedef void (*pfw_callback_t)(void* cookie, const char* params);
-typedef void (*pfw_load_t)(const char* name, int32_t* state);
-typedef void (*pfw_save_t)(const char* name, int32_t state);
+typedef void (*pfw_load_t)(void* cookie, const char* name, int32_t* state);
+typedef void (*pfw_save_t)(void* cookie, const char* name, int32_t state);
+typedef void (*pfw_release_t)(void* cookie);
 
 typedef struct pfw_plugin_def_t {
     const char* name;
@@ -50,9 +51,10 @@ typedef struct pfw_plugin_def_t {
  ****************************************************************************/
 
 void* pfw_create(const char* criteria, const char* settings,
-    pfw_plugin_def_t* defs, int nb, pfw_load_t load, pfw_save_t save);
+    pfw_plugin_def_t* defs, int nb, pfw_load_t load, pfw_save_t save,
+    void *cookie);
 void pfw_apply(void* handle);
-void pfw_destroy(void* handle);
+void pfw_destroy(void* handle , void *release_cb);
 char* pfw_dump(void* handle);
 
 /* Subscribe plugin. */
