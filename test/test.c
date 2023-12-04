@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
     while (1) {
         char *cmd, *arg1, *arg2, *arg3, *saveptr, *dump;
         char resp[64];
-        int i, res;
+        int i, res, res1;
 
         /* Consume command line. */
 
@@ -153,6 +153,10 @@ int main(int argc, char* argv[])
             ret = pfw_getstring(handle, arg1, resp, sizeof(resp));
             if (ret >= 0)
                 printf("get %s\n", resp);
+        } else if (!strcmp(cmd, "getrange")) {
+            ret = pfw_getrange(handle, arg1, &res, &res1);
+            if (ret >= 0)
+                printf("get [%d,%d]\n", res, res1);
         } else if (!strcmp(cmd, "getparameter")) {
             ret = pfw_getparameter(handle, arg1, resp, sizeof(resp));
             if (ret >= 0)
