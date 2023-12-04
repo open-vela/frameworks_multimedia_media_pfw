@@ -485,6 +485,39 @@ int pfw_getstring(void* handle, const char* name, char* value, int len)
     return ret;
 }
 
+int pfw_getrange(void* handle, const char* name, int* min_value, int* max_value)
+{
+    pfw_system_t* system = handle;
+    pfw_criterion_t* criterion;
+    pfw_interval_t* interval;
+
+    if (!system || !name)
+        return -EINVAL;
+
+    criterion = pfw_criteria_find(system->criteria, name);
+    if (!criterion)
+        return -EINVAL;
+
+    if (criterion->type != PFW_CRITERION_NUMERICAL)
+        return -EPERM;
+
+    interval = pfw_vector_get(criterion->ranges, 0);
+    if (!interval)
+        return -EINVAL;
+
+    /* Numerical criteria with nb_ranges > 1 are ambigious. */
+    if (pfw_vector_get(criterion->ranges, 1))
+        return -ENOSYS;
+
+    if (min_value)
+        *min_value = interval->left;
+
+    if (max_value)
+        *max_value = interval->right;
+
+    return 0;
+}
+
 int pfw_contain(void* handle, const char* name, const char* value,
     int* contain)
 {

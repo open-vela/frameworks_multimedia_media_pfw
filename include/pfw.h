@@ -52,9 +52,9 @@ typedef struct pfw_plugin_def_t {
 
 void* pfw_create(const char* criteria, const char* settings,
     pfw_plugin_def_t* defs, int nb, pfw_load_t load, pfw_save_t save,
-    void *cookie);
+    void* cookie);
 void pfw_apply(void* handle);
-void pfw_destroy(void* handle , void *release_cb);
+void pfw_destroy(void* handle, void* release_cb);
 char* pfw_dump(void* handle);
 
 /* Subscribe plugin. */
@@ -78,6 +78,7 @@ int pfw_reset(void* handle, const char* name);
 
 int pfw_getint(void* handle, const char* name, int* value);
 int pfw_getstring(void* handle, const char* name, char* value, int len);
+int pfw_getrange(void* handle, const char* name, int* min_value, int* max_value);
 int pfw_contain(void* handle, const char* name, const char* value,
     int* contain);
 
