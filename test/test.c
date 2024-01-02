@@ -29,19 +29,8 @@
 #include <string.h>
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define PFW_SUBSCRIBERS_MAX 32
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-static void pfw_test_callback(void* cookie, const char* params)
-{
-    printf("[%s] id:%d params:%s\n", __func__, (int)(intptr_t)cookie, params);
-}
 
 static void pfw_ffmpeg_command_callback(void* cookie, const char* params)
 {
@@ -64,8 +53,6 @@ static pfw_plugin_def_t plugins[] = {
 
 static int nb_plugins = sizeof(plugins) / sizeof(plugins[0]);
 
-void* subscribers[PFW_SUBSCRIBERS_MAX];
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -76,7 +63,7 @@ int main(int argc, char* argv[])
     void* handle;
     int ret = 0;
 
-    handle = pfw_create("./criteria.conf", "./settings.conf",
+    handle = pfw_create("./criteria.txt", "./settings.pfw",
         plugins, nb_plugins, NULL, NULL, NULL);
     if (!handle) {
         printf("\n");
@@ -88,7 +75,7 @@ int main(int argc, char* argv[])
     while (1) {
         char *cmd, *arg1, *arg2, *arg3, *saveptr, *dump;
         char resp[64];
-        int i, res, res1;
+        int res, res1;
 
         /* Consume command line. */
 
@@ -107,27 +94,7 @@ int main(int argc, char* argv[])
 
         /* Command handle. */
 
-        if (!strcmp(cmd, "subscribe")) {
-            for (i = 0; i < PFW_SUBSCRIBERS_MAX; i++) {
-                if (!subscribers[i]) {
-                    subscribers[i] = pfw_subscribe(handle, "test",
-                        (void*)(intptr_t)i + 1, pfw_test_callback);
-                    if (!subscribers[i]) {
-                        ret = -EINVAL;
-                    } else {
-                        printf("Subscriber ID %d\n", i + 1);
-                    }
-                    break;
-                }
-            }
-        } else if (!strcmp(cmd, "unsubscribe")) {
-            i = strtol(arg1, NULL, 0) - 1;
-            if (i < 0 || i >= PFW_SUBSCRIBERS_MAX || !subscribers[i]) {
-                ret = -EINVAL;
-            } else {
-                pfw_unsubscribe(system, subscribers[i]);
-            }
-        } else if (!strcmp(cmd, "apply")) {
+        if (!strcmp(cmd, "apply")) {
             pfw_apply(handle);
         } else if (!strcmp(cmd, "dump")) {
             dump = pfw_dump(handle);
@@ -157,10 +124,6 @@ int main(int argc, char* argv[])
             ret = pfw_getrange(handle, arg1, &res, &res1);
             if (ret >= 0)
                 printf("get [%d,%d]\n", res, res1);
-        } else if (!strcmp(cmd, "getparameter")) {
-            ret = pfw_getparameter(handle, arg1, resp, sizeof(resp));
-            if (ret >= 0)
-                printf("%s\n", resp);
         } else if (!strcmp(cmd, "q")) {
             break;
         } else {

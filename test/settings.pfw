@@ -68,17 +68,6 @@ domain: MicDomain
 		ALL
 		FFmpegCommand = pcm0c,pause,;
 
-domain: SessionDomain
-	conf: normal
-		AudioMode Is normal
-		SessionStrategy = BT,Music;
-	conf: ringtone
-		AudioMode Is ringtone
-		SessionStrategy = BT,Ring;
-	conf: phone
-		AudioMode Is phone
-		SessionStrategy = BT,SCO;
-
 domain: IncallVolumeDomain
 	conf: X
 		AudioMode Is normal

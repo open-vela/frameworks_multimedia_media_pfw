@@ -35,41 +35,16 @@
 
 static void pfw_free_plugins(pfw_system_t* system)
 {
-    pfw_listener_t *listener, *tmp;
     pfw_plugin_t* plugin;
     int i;
 
     for (i = 0; (plugin = pfw_vector_get(system->plugins, i)); i++) {
-        LIST_FOREACH_SAFE(listener, &plugin->listeners, entry, tmp)
-        {
-            free(listener);
-        }
-
         free(plugin->parameter);
         free(plugin->name);
         free(plugin);
     }
 
     pfw_vector_free(system->plugins);
-}
-
-/**
- * @brief Regist callback at plugin as listener.
- */
-static void* pfw_listener_register(pfw_plugin_t* plugin,
-    void* cookie, pfw_callback_t cb)
-{
-    pfw_listener_t* listener;
-
-    listener = malloc(sizeof(pfw_listener_t));
-    if (!listener)
-        return NULL;
-
-    listener->cb = cb;
-    listener->cookie = cookie;
-    LIST_INSERT_HEAD(&plugin->listeners, listener, entry);
-
-    return listener;
 }
 
 /**
@@ -127,22 +102,17 @@ static bool pfw_apply_need(pfw_domain_t* domain, pfw_config_t* config)
 }
 
 /**
- * @brief Apply paramter to plugin listeners.
+ * @brief Apply paramter to plugin callback.
  */
 static void pfw_apply_acts(pfw_vector_t* action)
 {
     char buffer[PFW_MAXLEN_AMMENDS];
-    pfw_listener_t* listener;
     pfw_act_t* act;
     int i;
 
     for (i = 0; (act = pfw_vector_get(action, i)); i++) {
         pfw_apply_ammends(act->param, buffer, sizeof(buffer));
-        LIST_FOREACH(listener, &act->plugin.p->listeners, entry)
-        {
-            listener->cb(listener->cookie, buffer);
-        }
-
+        act->plugin.p->cb(act->plugin.p->cookie, buffer);
         free(act->plugin.p->parameter);
         act->plugin.p->parameter = strdup(buffer);
     }
@@ -180,64 +150,6 @@ void pfw_apply(void* handle)
     pthread_mutex_unlock(&system->mutex);
 }
 
-int pfw_getparameter(void* handle, const char* name, char* para, int len)
-{
-    pfw_system_t* system = handle;
-    pfw_plugin_t* plugin;
-    int i, ret = -EINVAL;
-
-    if (!system || !name || !para)
-        return ret;
-
-    pthread_mutex_lock(&system->mutex);
-    for (i = 0; (plugin = pfw_vector_get(system->plugins, i)); i++) {
-        if (!strcmp(plugin->name, name)) {
-            ret = snprintf(para, len, "%s", plugin->parameter);
-            break;
-        }
-    }
-    pthread_mutex_unlock(&system->mutex);
-
-    return ret;
-}
-
-void* pfw_subscribe(void* handle, const char* name,
-    void* cookie, pfw_callback_t cb)
-{
-    pfw_system_t* system = handle;
-    void* listener = NULL;
-    pfw_plugin_t* plugin;
-    int i;
-
-    if (!system || !name)
-        return NULL;
-
-    pthread_mutex_lock(&system->mutex);
-    for (i = 0; (plugin = pfw_vector_get(system->plugins, i)); i++) {
-        if (!strcmp(plugin->name, name)) {
-            listener = pfw_listener_register(plugin, cookie, cb);
-            break;
-        }
-    }
-    pthread_mutex_unlock(&system->mutex);
-
-    return listener;
-}
-
-void pfw_unsubscribe(void* handle, void* subscriber)
-{
-    pfw_system_t* system = handle;
-    pfw_listener_t* listener = subscriber;
-
-    if (!listener)
-        return;
-
-    pthread_mutex_lock(&system->mutex);
-    LIST_REMOVE(listener, entry);
-    pthread_mutex_unlock(&system->mutex);
-    free(listener);
-}
-
 void* pfw_plugin_register(pfw_system_t* system, pfw_plugin_def_t* def)
 {
     pfw_plugin_t* plugin;
@@ -250,14 +162,12 @@ void* pfw_plugin_register(pfw_system_t* system, pfw_plugin_def_t* def)
     if (!plugin)
         return NULL;
 
-    LIST_INIT(&plugin->listeners);
     plugin->parameter = NULL;
+    plugin->cookie = def->cookie;
+    plugin->cb = def->cb;
     plugin->name = strdup(def->name);
     if (!plugin->name)
         goto err1;
-
-    if (def->cb && !pfw_listener_register(plugin, def->cookie, def->cb))
-        goto err2;
 
     ret = pfw_vector_append(&system->plugins, plugin);
     if (ret < 0)
@@ -274,8 +184,8 @@ err1:
 }
 
 void* pfw_create(const char* criteria, const char* settings,
-    pfw_plugin_def_t* defs, int nb, pfw_load_t load,
-    pfw_save_t save, void *cookie)
+    pfw_plugin_def_t* defs, int nb, pfw_load_t on_load,
+    pfw_save_t on_save, void* cookie)
 {
     pfw_system_t* system;
     int i;
@@ -286,8 +196,8 @@ void* pfw_create(const char* criteria, const char* settings,
 
     pthread_mutex_init(&system->mutex, NULL);
 
-    system->load = load;
-    system->save = save;
+    system->on_load = on_load;
+    system->on_save = on_save;
     system->cookie = cookie;
 
     for (i = 0; i < nb; i++) {
@@ -322,18 +232,17 @@ void* pfw_create(const char* criteria, const char* settings,
     return system;
 
 err:
-    pfw_destroy(system, system->release_cb);
     return NULL;
 }
 
-void pfw_destroy(void* handle, void *release_cb)
+void pfw_destroy(void* handle, pfw_release_t on_release)
 {
     pfw_system_t* system = handle;
-    system->release_cb = release_cb;
 
     if (system) {
-        if (system->release_cb)
-            system->release_cb(system->cookie);
+        if (on_release)
+            on_release(system->cookie);
+
         pfw_context_destroy(system->criteria_ctx);
         pfw_context_destroy(system->settings_ctx);
         pfw_free_criteria(system->criteria);
