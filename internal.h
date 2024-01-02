@@ -85,21 +85,18 @@
  * Types
  ****************************************************************************/
 
-typedef struct pfw_ammend_t pfw_ammend_t;
-typedef struct pfw_context_t pfw_context_t;
-typedef struct pfw_vector_t pfw_vector_t;
-typedef struct pfw_interval_t pfw_interval_t;
-typedef struct pfw_criterion_t pfw_criterion_t;
-typedef struct pfw_rule_t pfw_rule_t;
-typedef struct pfw_act_t pfw_act_t;
-typedef struct pfw_action_t pfw_action_t;
-typedef struct pfw_config_t pfw_config_t;
-typedef struct pfw_domain_t pfw_domain_t;
-typedef struct pfw_listener_t pfw_listener_t;
-typedef LIST_HEAD(pfw_listener_list_t, pfw_listener_t)
-    pfw_listener_list_t;
-typedef struct pfw_plugin_t pfw_plugin_t;
-typedef struct pfw_system_t pfw_system_t;
+typedef struct pfw_ammend_s pfw_ammend_t;
+typedef struct pfw_context_s pfw_context_t;
+typedef struct pfw_vector_s pfw_vector_t;
+typedef struct pfw_interval_s pfw_interval_t;
+typedef struct pfw_criterion_s pfw_criterion_t;
+typedef struct pfw_rule_s pfw_rule_t;
+typedef struct pfw_act_s pfw_act_t;
+typedef struct pfw_action_s pfw_action_t;
+typedef struct pfw_config_s pfw_config_t;
+typedef struct pfw_domain_s pfw_domain_t;
+typedef struct pfw_plugin_s pfw_plugin_t;
+typedef struct pfw_system_s pfw_system_t;
 
 /**
  * @brief pfw_ammend_t
@@ -108,7 +105,7 @@ typedef struct pfw_system_t pfw_system_t;
  *
  * @see pfw_config_t pfw_act_t
  */
-struct pfw_ammend_t {
+struct pfw_ammend_s {
     int type;
     union {
         const char* raw;
@@ -120,7 +117,7 @@ struct pfw_ammend_t {
  * @brief pfw_interval_t is a open interval, used by NumericalCriterion.
  * @see pfw_criterion_t
  */
-struct pfw_interval_t {
+struct pfw_interval_s {
     int32_t left;
     int32_t right;
 };
@@ -133,7 +130,7 @@ struct pfw_interval_t {
  *
  * @see pfw_rule_t pfw_apply() pfw_criterion_*()
  */
-struct pfw_criterion_t {
+struct pfw_criterion_s {
     int type; // @see PFW_CRITERION_*
     pfw_vector_t* names;
     pfw_vector_t* ranges;
@@ -152,7 +149,7 @@ struct pfw_criterion_t {
  *
  * @see pfw_criterion_t pfw_config_t
  */
-struct pfw_rule_t {
+struct pfw_rule_s {
     int predicate; // @see PFW_PREDICATE_*
     pfw_vector_t* branches;
     union {
@@ -169,12 +166,12 @@ struct pfw_rule_t {
 /**
  * @brief pfw_act_t is applying paramter by plugin method.
  *
- * Apply the parameter to all listener callbacks in the plugin
+ * Apply the parameter to callback in the plugin
  * when the act is applied.
  *
  * @see pfw_action_t pfw_plugin_t
  */
-struct pfw_act_t {
+struct pfw_act_s {
     union {
         const char* def;
         pfw_plugin_t* p;
@@ -189,7 +186,7 @@ struct pfw_act_t {
  *
  * @see pfw_domain_t pfw_rule_t pfw_action_t
  */
-struct pfw_config_t {
+struct pfw_config_s {
     char* current;
     pfw_vector_t* name; // @see pfw_ammend_t
     pfw_rule_t* rules;
@@ -203,21 +200,10 @@ struct pfw_config_t {
  *
  * @see pfw_config_t pfw_apply()
  */
-struct pfw_domain_t {
+struct pfw_domain_s {
     const char* name;
     pfw_config_t* current;
     pfw_vector_t* configs;
-};
-
-/**
- * @brief pfw_listener_t is a callback in plugin
- * @see pfw_plugin_t
- */
-struct pfw_listener_t {
-    void* cookie;
-    pfw_callback_t cb;
-    LIST_ENTRY(pfw_listener_t)
-    entry;
 };
 
 /**
@@ -225,13 +211,12 @@ struct pfw_listener_t {
  *
  * Callbacks used by act in state machine, user can add/remove callback
  * to any plugin at runtime.
- *
- * @see pfw_listener_t pfw_subscribe() pfw_unsubscribe()
  */
-struct pfw_plugin_t {
+struct pfw_plugin_s {
     char* name;
     char* parameter;
-    pfw_listener_list_t listeners;
+    void* cookie;
+    pfw_callback_t cb;
 };
 
 /**
@@ -244,17 +229,16 @@ struct pfw_plugin_t {
  * @see pfw_criterion_t pfw_domain_t pfw_context_t
  * pfw_create() pfw_destroy()
  */
-struct pfw_system_t {
+struct pfw_system_s {
     pfw_context_t* criteria_ctx;
     pfw_context_t* settings_ctx;
     pfw_vector_t* criteria;
     pfw_vector_t* domains;
     pfw_vector_t* plugins;
-    pfw_load_t load; // Load criterion state at initilization.
-    pfw_save_t save; // Save criterion state when it changes.
-    pfw_release_t release_cb;
+    pfw_load_t on_load; // Load criterion state at initilization.
+    pfw_save_t on_save; // Save criterion state when it changes.
     pthread_mutex_t mutex;
-    void *cookie;
+    void* cookie;
 };
 
 /****************************************************************************

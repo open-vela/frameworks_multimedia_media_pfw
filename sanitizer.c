@@ -156,15 +156,8 @@ static bool pfw_sanitize_act(pfw_act_t* act, pfw_system_t* system)
     /* Auto generate plugin if user doesn't define. */
 
     if (!plugin) {
-        pfw_plugin_def_t def = {
-            .cb = NULL,
-            .cookie = NULL,
-            .name = act->plugin.def
-        };
-
-        plugin = pfw_plugin_register(system, &def);
-        if (!plugin)
-            return false;
+        PFW_DEBUG("Plugin '%s' not support\n", act->plugin.def);
+        return false;
     }
 
     act->plugin.p = plugin;
@@ -220,8 +213,8 @@ static bool pfw_sanitize_criterion(pfw_criterion_t* criterion, pfw_system_t* sys
     }
 
     criterion->state = criterion->init.v;
-    if (system->load)
-        system->load(system->cookie, pfw_vector_get(criterion->names, 0), &criterion->state);
+    if (system->on_load)
+        system->on_load(system->cookie, pfw_vector_get(criterion->names, 0), &criterion->state);
 
     if (criterion->type != PFW_CRITERION_NUMERICAL
         && !pfw_sanitize_string(criterion->ranges)) {

@@ -32,7 +32,7 @@
  * Private Types
  ****************************************************************************/
 
-struct pfw_context_t {
+struct pfw_context_s {
     char* buf;
     char* ptr;
     char* rest;

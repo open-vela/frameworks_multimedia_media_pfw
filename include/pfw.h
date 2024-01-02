@@ -51,18 +51,11 @@ typedef struct pfw_plugin_def_t {
  ****************************************************************************/
 
 void* pfw_create(const char* criteria, const char* settings,
-    pfw_plugin_def_t* defs, int nb, pfw_load_t load, pfw_save_t save,
-    void* cookie);
+    pfw_plugin_def_t* defs, int nb, pfw_load_t on_load,
+    pfw_save_t on_save, void* cookie);
 void pfw_apply(void* handle);
-void pfw_destroy(void* handle, void* release_cb);
+void pfw_destroy(void* handle, pfw_release_t on_release);
 char* pfw_dump(void* handle);
-
-/* Subscribe plugin. */
-
-int pfw_getparameter(void* handle, const char* name, char* para, int len);
-void* pfw_subscribe(void* handle, const char* name,
-    void* cookie, pfw_callback_t cb);
-void pfw_unsubscribe(void* handle, void* subscriber);
 
 /* Criterion modify. */
 

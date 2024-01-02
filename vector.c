@@ -40,7 +40,7 @@
  * Private Types
  ****************************************************************************/
 
-struct pfw_vector_t {
+struct pfw_vector_s {
     size_t cnt;
     size_t size;
     void** eles;
