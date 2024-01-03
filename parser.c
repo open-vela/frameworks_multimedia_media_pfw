@@ -319,7 +319,7 @@ err:
 static int pfw_parse_config(pfw_context_t* ctx, pfw_config_t** pc)
 {
     pfw_config_t* config;
-    pfw_rule_t* rule;
+    pfw_rule_t* rule = NULL;
     pfw_act_t* act;
     char* word;
     int ret, nb;
