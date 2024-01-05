@@ -29,8 +29,20 @@
 #include <string.h>
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define PFW_SUBSCRIBERS_MAX 32
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static void pfw_change_callback(void* cookie, int num, char* value)
+{
+    printf("[%s] id:%d number:%d value:%s\n",
+        __func__,(int)(intptr_t)cookie, num, value);
+}
 
 static void pfw_ffmpeg_command_callback(void* cookie, const char* params)
 {
@@ -53,6 +65,8 @@ static pfw_plugin_def_t plugins[] = {
 
 static int nb_plugins = sizeof(plugins) / sizeof(plugins[0]);
 
+void* subscribers[PFW_SUBSCRIBERS_MAX];
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -74,8 +88,8 @@ int main(int argc, char* argv[])
 
     while (1) {
         char *cmd, *arg1, *arg2, *arg3, *saveptr, *dump;
+        int i, res, res1;
         char resp[64];
-        int res, res1;
 
         /* Consume command line. */
 
@@ -94,7 +108,27 @@ int main(int argc, char* argv[])
 
         /* Command handle. */
 
-        if (!strcmp(cmd, "apply")) {
+        if (!strcmp(cmd, "subscribe")) {
+            for (i = 0; i < PFW_SUBSCRIBERS_MAX; i++) {
+                if (!subscribers[i]) {
+                    subscribers[i] = pfw_subscribe(handle, arg1,
+                        pfw_change_callback, (void*)(intptr_t)i + 1);
+                    if (!subscribers[i]) {
+                        ret = -EINVAL;
+                    } else {
+                        printf("Subscriber ID %d\n", i + 1);
+                    }
+                    break;
+                }
+            }
+        } else if (!strcmp(cmd, "unsubscribe")) {
+            i = strtol(arg1, NULL, 0) - 1;
+            if (i < 0 || i >= PFW_SUBSCRIBERS_MAX || !subscribers[i]) {
+                ret = -EINVAL;
+            } else {
+                pfw_unsubscribe(system, subscribers[i]);
+            } 
+        } else if (!strcmp(cmd, "apply")) {
             pfw_apply(handle);
         } else if (!strcmp(cmd, "dump")) {
             dump = pfw_dump(handle);

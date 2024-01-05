@@ -36,6 +36,7 @@ extern "C" {
  ****************************************************************************/
 
 typedef void (*pfw_callback_t)(void* cookie, const char* params);
+typedef void (*pfw_listen_t)(void* cookie, int number, char* literal);
 typedef void (*pfw_load_t)(void* cookie, const char* name, int32_t* state);
 typedef void (*pfw_save_t)(void* cookie, const char* name, int32_t state);
 typedef void (*pfw_release_t)(void* cookie);
@@ -66,6 +67,11 @@ int pfw_exclude(void* handle, const char* name, const char* value);
 int pfw_increase(void* handle, const char* name);
 int pfw_decrease(void* handle, const char* name);
 int pfw_reset(void* handle, const char* name);
+
+/* Criterion subscribe */
+void* pfw_subscribe(void* handle, const char* name,
+    pfw_listen_t on_change, void* cookie);
+void pfw_unsubscribe(void* handle, void* subscriber);
 
 /* Criterion query. */
 
