@@ -45,9 +45,9 @@
  */
 static inline bool pfw_rule_match_atomic(pfw_rule_t* rule)
 {
+    pfw_interval_t* itv = rule->state.itv;
     int32_t s1 = rule->criterion.p->state;
     int32_t s2 = rule->state.v;
-    pfw_interval_t* itv = rule->state.itv;
 
     switch (rule->predicate) {
     case PFW_PREDICATE_IS:
@@ -145,10 +145,18 @@ static bool pfw_criterion_check_integer(pfw_criterion_t* criterion,
 static inline void
 pfw_criterion_set(void* handle, pfw_criterion_t* criterion, int32_t state)
 {
+    char literal[PFW_CRITERION_MAX_LITERAL];
     pfw_system_t* system = handle;
+    pfw_listener_t* listener;
+    int ret;
 
     if (criterion->state != state) {
         criterion->state = state;
+        ret = pfw_criterion_itoa(criterion, state, literal, PFW_CRITERION_MAX_LITERAL);
+        LIST_FOREACH(listener, &criterion->listeners, entry)
+        {
+            listener->on_change(listener->cookie, criterion->state, ret < 0 ? NULL : literal);
+        }
         if (system->on_save)
             system->on_save(system->cookie, pfw_vector_get(criterion->names, 0), state);
     }
@@ -352,6 +360,49 @@ pfw_criterion_t* pfw_criteria_find(pfw_vector_t* criteria, const char* target)
     }
 
     return NULL;
+}
+
+/* Criterion (un)subscribe.*/
+
+void* pfw_subscribe(void* handle, const char* name, pfw_listen_t cb, void* cookie)
+{
+    pfw_system_t* system = handle;
+    pfw_criterion_t* criterion;
+    pfw_listener_t* listener;
+
+    if (!system || !name)
+        return NULL;
+
+    criterion = pfw_criteria_find(system->criteria, name);
+    if (!criterion)
+        return NULL;
+
+    listener = malloc(sizeof(pfw_listener_t));
+    if (!listener)
+        return NULL;
+
+    listener->on_change = cb;
+    listener->cookie = cookie;
+
+    pthread_mutex_lock(&system->mutex);
+    LIST_INSERT_HEAD(&criterion->listeners, listener, entry);
+    pthread_mutex_unlock(&system->mutex);
+
+    return listener;
+}
+
+void pfw_unsubscribe(void* handle, void* subscriber)
+{
+    pfw_listener_t* listener = subscriber;
+    pfw_system_t* system = handle;
+
+    if (!system || !listener)
+        return;
+
+    pthread_mutex_lock(&system->mutex);
+    LIST_REMOVE(listener, entry);
+    pthread_mutex_unlock(&system->mutex);
+    free(listener);
 }
 
 /* Criterion modify. */
