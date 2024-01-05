@@ -89,6 +89,10 @@ typedef struct pfw_ammend_s pfw_ammend_t;
 typedef struct pfw_context_s pfw_context_t;
 typedef struct pfw_vector_s pfw_vector_t;
 typedef struct pfw_interval_s pfw_interval_t;
+typedef struct pfw_listener_s pfw_listener_t;
+typedef LIST_HEAD(pfw_listener_list_s, pfw_listener_s)
+    pfw_listener_list_t;
+typedef LIST_ENTRY(pfw_listener_s) pfw_listener_entry_t;
 typedef struct pfw_criterion_s pfw_criterion_t;
 typedef struct pfw_rule_s pfw_rule_t;
 typedef struct pfw_act_s pfw_act_t;
@@ -123,6 +127,15 @@ struct pfw_interval_s {
 };
 
 /**
+ * @brief pfw_listener_t is a callback when change occurred.
+*/
+struct pfw_listener_s {
+    void* cookie;
+    pfw_listen_t on_change;
+    pfw_listener_entry_t entry;
+};
+
+/**
  * @brief pfw_criterion_t is condition variable.
  *
  * When criterion is modified, the rules in domains might change;
@@ -139,6 +152,7 @@ struct pfw_criterion_s {
         const char* def;
         int32_t v;
     } init;
+    pfw_listener_list_t listeners;
 };
 
 /**

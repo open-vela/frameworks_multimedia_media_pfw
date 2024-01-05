@@ -121,6 +121,7 @@ static void pfw_free_domain(pfw_domain_t* domain)
 
 static void pfw_free_criterion(pfw_criterion_t* criterion)
 {
+    pfw_listener_t *listener, *tmp;
     pfw_interval_t* intervel;
     int i;
 
@@ -130,6 +131,11 @@ static void pfw_free_criterion(pfw_criterion_t* criterion)
     if (criterion->type == PFW_CRITERION_NUMERICAL) {
         for (i = 0; (intervel = pfw_vector_get(criterion->ranges, i)); i++)
             free(intervel);
+    }
+
+    LIST_FOREACH_SAFE(listener, &criterion->listeners, entry, tmp)
+    {
+        free(listener);
     }
 
     pfw_vector_free(criterion->ranges);
@@ -605,6 +611,8 @@ int pfw_parse_criteria(pfw_context_t* ctx, pfw_vector_t** p)
             PFW_DEBUG("Invalid %dth criterion\n", nb);
             return ret;
         }
+
+        LIST_INIT(&criterion->listeners);
 
         ret = pfw_vector_append(p, criterion);
         if (ret < 0) {
