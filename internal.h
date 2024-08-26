@@ -35,7 +35,7 @@
  * Pre-Processor Definations
  ****************************************************************************/
 
-#if CONFIG_LIB_PFW_DEBUG
+#ifdef CONFIG_LIB_PFW_DEBUG
 #define PFW_DEBUG(...) printf(__VA_ARGS__)
 #else
 #define PFW_DEBUG(...)
@@ -128,7 +128,7 @@ struct pfw_interval_s {
 
 /**
  * @brief pfw_listener_t is a callback when change occurred.
-*/
+ */
 struct pfw_listener_s {
     void* cookie;
     pfw_listen_t on_change;
