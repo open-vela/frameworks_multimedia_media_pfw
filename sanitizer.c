@@ -83,7 +83,7 @@ static void pfw_sanitize_ammends(pfw_vector_t* ammends, pfw_system_t* system)
 
 static bool pfw_sanitize_rules(pfw_rule_t* rules, pfw_system_t* system)
 {
-    const char* def = rules->criterion.def;
+    pfw_criterion_t* criterion;
     pfw_rule_t* rule;
     int i;
 
@@ -101,11 +101,13 @@ static bool pfw_sanitize_rules(pfw_rule_t* rules, pfw_system_t* system)
 
     /* Santinize criterion. */
 
-    rules->criterion.p = pfw_criteria_find(system->criteria, rules->criterion.def);
-    if (!rules->criterion.p) {
-        PFW_DEBUG("Criterion '%s' not found\n", def);
+    criterion = pfw_criteria_find(system->criteria, rules->criterion.def);
+    if (!criterion) {
+        PFW_DEBUG("Criterion '%s' not found\n", rules->criterion.def);
         return false;
     }
+
+    rules->criterion.p = criterion;
 
     /* Santinize state. */
 
