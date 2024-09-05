@@ -600,7 +600,7 @@ void pfw_free_criteria(pfw_vector_t* criteria)
 
 int pfw_parse_criteria(pfw_context_t* ctx, pfw_vector_t** p)
 {
-    pfw_criterion_t* criterion;
+    pfw_criterion_t* criterion = NULL;
     int ret, nb;
 
     for (nb = 0;; nb++) {
