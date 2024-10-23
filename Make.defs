@@ -1,5 +1,5 @@
 ############################################################################
-# frameworks/pfw/Make.defs
+# frameworks/multimedia/pfw/Make.defs
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -19,5 +19,6 @@
 ############################################################################
 
 ifneq ($(CONFIG_LIB_PFW),)
-CONFIGURED_APPS += $(APPDIR)/frameworks/pfw/
+CONFIGURED_APPS += $(APPDIR)/frameworks/multimedia/media/pfw/
+CLEANDIRS += $(APPDIR)/frameworks/multimedia/media/pfw/
 endif
