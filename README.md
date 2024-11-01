@@ -1,216 +1,126 @@
-# What is PFW?
-*PFW* is the abbriviation of parameter-framework, it is to build state machine based on configuration files and callback functions. The configuration files define the *states*, the *conditions* that define states, and the *criteria* that define conditions. The callbacks define the *actions* of states.
 
-This framework makes the core of **Media Policy of Xiaomi Vela OS**, Though various IOT devices has similar media criteria such as *Audio Mode* and *Available Devices*, the details of stragtegy like *bluetooth device routing* and *volume curve* can be totally different. Therefore, it would be much efficient if we use different configuration files and a configurable codebase.
+# **PFW（Parameter-Framework）**
 
-The idea is from [intel's parameter-framework](https://github.com/intel/parameter-framework), which is too heavy for embedded devices. This frameworks doesn't support parameters except string, dynamic library plugins and XML files, since they cost lots of space but not necessary.
+[English|[简体中文](./README_zh-cn.md)]
 
-# How to use PFW?
-> Let's assume you already have your configuration files and callbacks.
+## **Overview**
 
-Usually, pfw involves two kinds of users: server and clients. The server should create a pfw object with its configuration files and callback plugins, and maintain it till destroying. In the mean time the clients can modify or query some criteria.
+Media Policy uses PFW to **construct routes**, **audio policies**, and various other states. PFW is a generic framework based on configuration files and callback functions to construct state machines.
+- In the PFW configuration file, we define the states in the state machine, the conditions under which each state is valid, and the variables used for evaluation.
+- The callback functions constitute the actions of the state machine.
 
-Additionally, if you make some changes to criteria, the actions won't be taken untill calling `pfw_apply`.
-```C
-// modify
-int pfw_setint(void* handle, const char* name, int value);
-int pfw_setstring(void* handle, const char* name, const char* value);
-int pfw_include(void* handle, const char* name, const char* value);
-int pfw_exclude(void* handle, const char* name, const char* value);
-int pfw_increase(void* handle, const char* name);
-int pfw_decrease(void* handle, const char* name);
-int pfw_reset(void* handle, const char* name);
+![pfw 框架图](../images/pfw/pfw.jpg)
 
-// apply
-void pfw_apply(void* handle);
-
-// query
-int pfw_getint(void* handle, const char* name, int* value);
-int pfw_getstring(void* handle, const char* name, char* value, int len);
-int pfw_getrange(void* handle, const char* name, int* min_value, int* max_value);
-int pfw_contain(void* handle, const char* name, const char* value,
-    int* contain);
+## **Project Directory**
+```tree
+.
+├── context.c
+├── criterion.c
+├── dump.c
+├── include
+│   └── pfw.h
+├── internal.h
+├── Kconfig
+├── Make.defs
+├── Makefile
+├── parser.c
+├── README.md
+├── README_zh-cn.md
+├── sanitizer.c
+├── system.c
+├── test
+│   ├── criteria.txt
+│   ├── Makefile
+│   ├── settings.pfw
+│   └── test.c
+└── vector.c
 ```
 
-# How to configure PFW?
-This part explains how to write and test your own configuration files and callbacks.
+## **Function Introduction**
 
-## 1. Write criteria.conf
-Each line of this file defines a criterion:
+The PFW module primarily includes features such as creating a system, modifying variables, and more.
+ - **Creatie System**：Provides the path to the configuration file and plugins to create a PFW system.By implementing on_load and on_save methods, the PFW system can have the capability to read and save configurations immediately.
+ - **Modify Variables**：Methods such as pfw_setint provide an interface to modify the value of a single variable.
+ - **Query Variables**：Query the value of a single variable or print the entire state of the system through dump.
+ - **Apply Changes**： Apply the current variable value to the state machine. If there is a change, the corresponding plugin will be called according to the logic in the configuration file.
+ - **Subscribe to plugins**:We can subscribe to a specified plugin by name. In practice, a callback will be registered in the plugin. When the corresponding plugin is called, the previously registered callback will also be called to notify the subscriber
+
+## **Write PFW configuration file**
+
+### **Configuration File Components**
+ - criteria.txt：Define all the variables in the system and the dependencies between them.
+ - settings.pfw：Define the rules in the system, and the transfer conditions between states.
+
+### **Criteria Syntax**
+
+  In the criteria.txt file, each line defines a variable. The right side of := and |= indicates possible syntax expansions. The format is as follows:
 ```
-
-<CRITERION> := NumericalCriterion <NAMES> : <RANGES>
-            |= ExclusiveCriterion <NAMES> : <VALUES>
-            |= InclusiveCriterion <NAMES> : <VALUES>
-            |= NumericalCriterion <NAMES> : <RANGES> = <INIT>
-            |= ExclusiveCriterion <NAMES> : <VALUES> = <INIT>
-            |= InclusiveCriterion <NAMES> : <VALUES> = <INIT>
-```
-
-### 1.1 Types
-There are 3 kinds of criterion, all based on `int32_t`:
-- `NumericalCriterion`: it has value range between `INT32_MIN` and `INT32_MAX`.
-- `ExclusiveCriterion`: similar to enum, each numerical value has lteral meaning.
-- `InclusiveCriterion`: similar to bitmask, each bit has literal meaning.
-
-Here are some examples:
-```
-NumericalCriterion MusicVolume : [0,10]
-ExclusiveCriterion AudioMode : normal ringtone incall
-InclusiveCriterion AvailableDevices : a2dp btsco
+<TYPE> <NAMES>:<RANGES>
 ```
 
-The `AudioMode` has value range of `{ 0:normal, 1:ringtone, 2:incall }`, the `AvailableDevices` has value range of `{ 0:<none> 1:a2dp, 2:btsco, 3:a2dp|btsco }`.
+**TYPE** :
+Variables are essentially all of type int32_t, but their values can be interpreted in three types:
+- **NumericalCriterion**：Numerical type, which is the raw int type. The value range is from INT32_MIN to INT32_MAX.
+- **ExclusiveCriterion**：Enumerated type, similar to enums in C. A series of values starting from 0 are interpreted as meaningful strings.
+- **InclusiveCriterion**：Mask type, where a series of bits from the least significant bit to the most significant bit are interpreted as meaningful strings.
 
-### 1.2 Names
-Each criteriona could have more than one name, for example:
-```
-NumericalCriterion MusicVolume MediaVolume SportVolume : [0,10]
-```
+**NAMES**:
+Each variable can have one or more names, and these names are all bound to the same variable entity when reading or writing variables.
 
-### 1.3 Ranges
-For `NumericalCriterion`, you can define more than one interval.
-```
-<RANGES> := <RANGE> <RANGES>
-         |= <RANGE>
+**RANGES**:
+- The value domain of a **NumericalCriterion** is represented by one or more open intervals.
+- The value domain of an **ExclusiveCriterion** and an **InclusiveCriterion** is represented by one or more strings.
 
-<RANGE> := [%d,%d]
-        |= [,%d]
-        |= [%d,]
-        |= %d
-```
-### 1.4 Initial values
-initial values are default zero, you can explicitly define it in need.
-```
-NumericalCriterion MusicVolume : [0,10] = 5
-ExclusiveCriterion AudioMode : normal ringtone incall = normal
-```
+#### **Example of writing a Criteria file**
 
-## 2. Write settings.conf
-This file has indentations like python (tab or 4 spaces). Each `domain` of this file defines a state machine. Each `conf` defines a state, if the `RULES` evaluates to be true, the `ACTION` would be taken.
-```
-domain: xxx
-    conf: xxx
+ Take Audio policy as an example：
+ ```shell
+NumericalCriterion MediaVolume MusicVolume : [0,10] = 5
+ExclusiveCriterion AudioMode               : normal phone
+InclusiveCriterion AvailableDevices        : mic sco a2dp = mic
+ ```
+- **Media Volume**: numeric, value range is 0 to 10; initial value is 5.
+- **Audio mode**: enumerated, value 0 corresponds to normal mode, value 1 corresponds to phone mode; initial value is 0 by default.
+- **Available devices**: mask type, value 0 is the empty set, value 1 means mic, value 2 means sco, value 3 means. mic|sco, ......, value 7 means mic|sco|a2dp; initially turns on mic.
+
+### **Settings.pfw Syntax**
+
+The settings file consists of a number of **domain**, each representing a state machine. This configuration file distinguishes the hierarchy by indentation, with each tab or 4 spaces representing one level of indentation, and tabs and spaces cannot be mixed (same as python).
+- Each state machine has several confs, each representing a state.
+- Each state has two parts, **condition** and **action**. When we apply a criterion, we traverse all the states in order, and we enter the state that satisfies the **condition** first. We will enter the state that satisfies the **condition** first, and if we enter a new state, we will execute its **action**.
+ ```shell
+  domain: string
+    conf: string
         <RULES>
-        <ACTION>
-    conf: xxx
-        <RULES>
-        <ACTION>
+        <ACTS>
+```
+- **RULES** section defines constraints on the values of criteria. These constraints can be recursively combined using "and" and "or" logical operators. Different types of criteria use different predicates for their constraints.
+- **ACTS** represent the execution of one or more plugin callbacks. In the ACTS section, if you want to reference the current value of a criterion variable rather than a fixed value, the following syntax is supported:
+```shell
+param%criterion%param
+```
+#### **Example of writing a Settings file**
+
+As an example of Audio sco node control, when sco is available and the user needs it, the sample rate is updated via the FFmpegCommand plugin and the sco input/output nodes are turned:
+```shell
+domain: SCO
+    conf: enable
+        ALL
+            UsingDevices Includes sco
+            AvailableDevices Includes sco
+        FFmpegCommand = sco,sample_rate,%HFPSampleRate%;sco,play,;
+    conf: disable
+        ALL
+        FFmpegCommand = sco,pause,;
 ```
 
-### 2.1 Rules
-It has multi-branch tree structure, the intermediate node is `ALL` or `ANY`, which means `and` and `or`; the leaf node is a judgment on a criterion's value:
-- `NumericalCriterion`:
-    ```
-    MusicVolume In [,5]
-    MusicVolume NoIn [6,]
-    ```
-- `ExclusiveCriterion`:
-    ```
-    AudioMode Is incall
-    AudioMode IsNot incall
-    ```
-- `IncludesiveCriterion`:
-    ```
-    AvailableDevices Includes a2dp
-    AvailableDevices Excludes a2dp
-    ```
+## **Check Tool**
 
-To combine them together:
-```
-ANY
-    ALL
-        AudioMode Is ringtone
-        AvailableDevices Includes btsco
-        RingVolume In [6,]
-    ALL
-        AudioMode Is normal
-        MusicVolume In [6,]
-```
+In the pfw/test directory, we have configured a Makefile for use on the host. This Makefile can compile and generate a test command-line tool. You can use this tool to input commands and debug the two .conf configuration files in the same folder. Additionally, when developing new features for PFW, this tool can be used to quickly check the code.
+```shell
+pfw/test$ make cc -o test ../system.c ../parser.c ../context.c ../vector.c ../sanitizer.c ../criterion.c test.c -Wall -Werror -O0 -g -I ../include -D CONFIG_LIB_PFW_DEBUG -fsanitize=address -fsanitize=leak
+pfw/test$ ./test
 
-### 2.2 Action
-In the action part, you can write one or multiple callback, they would be called in turns.
-
-## 3. Define callback plugin
-```
-typedef void (*pfw_callback_t)
-    (void* cookie, const char* params);
-
-typedef struct pfw_plugin_def_t {
-    const char* name;
-    void* cookie;
-    pfw_callback_t cb;
-} pfw_plugin_def_t;
-
-void* pfw_create(..., pfw_plugin_def_t* defs, int nb， ...);
-```
-
-## 4. Test your configurations on host
-There is a test tool for unix host, read the codes for more details.
-```
-cd pfw/test
-make
-./test
-```
-
-```
-$ ./test
-[pfw_test_callback] id:0 params:pcm0p,set_parameter,set_scenario=music;MixSpeaker,weights,1 1 1 1 1 0;
-[pfw_test_callback] id:0 params:SelSCO,map,-1;
-[pfw_test_callback] id:0 params:SelPlay,map,0 -1;
-[pfw_test_callback] id:0 params:SelAlarm,map,0 -1;
-[pfw_test_callback] id:0 params:SCOtx,pause,;
-[pfw_test_callback] id:0 params:pcm0c,play,;SelCap,map,0 0 -1;
-[pfw_test_callback] id:0 params:;
-[pfw_test_callback] id:0 params:VolSCO,volume,-20dB;
-[pfw_test_callback] id:0 params:VolRing,volume,-20dB;
-[pfw_test_callback] id:0 params:VolMedia,volume,-20dB;
-[pfw_test_callback] id:0 params:VolAlarm,volume,-20dB;
-pfw> dump
-+-------------------------------------------------------------
-| CRITERIA                         | STATE    | VALUE
-+-------------------------------------------------------------
-| AudioMode                        | 0        | normal
-| UsingDevices                     | 1        | mic
-| AvailableDevices                 | 0        | <none>
-| HFPSampleRate                    | 0        | 8000
-| ActiveStreams                    | 0        | <none>
-| Ring                             | 0        | amovie_async@Ring
-| Music                            | 0        | amovie_async@Music
-| Sport                            | 0        | amovie_async@Media
-| Alarm                            | 0        | amovie_async@Alarm
-| Enforced                         | 0        | amovie_async@Enforced
-| Video                            | 0        | movie_async@Video
-| VideoSink                        | 0        | moviesink_async
-| AudioSink                        | 0        | amoviesink_async
-| PictureSink                      | 0        | vmoviesink_async
-| persist.media.MuteMode           | 0        | off
-| persist.media.SCOVolume          | 5        | 5
-| persist.media.RingVolume         | 5        | 5
-| persist.media.MediaVolume        | 5        | 5
-| persist.media.AlarmVolume        | 5        | 5
-+-------------------------------------------------------------
-| DOMAIN                           | CONFIG
-+-------------------------------------------------------------
-| SpeakerDomain                    | music
-| SCOrxDomain                      | default
-| PlayDomain                       | speaker
-| AlarmDomain                      | speaker
-| SCOtxDomain                      | default
-| MicDomain                        | capture
-
-| IncallVolumeDomain               | X
-| TTSVolumeDomain                  | 5
-| RingVolumeDomain                 | 5
-| MediaVolumeDomain                | 5
-| AlarmVolumeDomain                | 5
-+-------------------------------------------------------------
-ret 0
-pfw> setint persist.media.MediaVolume 7
-ret 0
-pfw> apply
-[pfw_test_callback] id:0 params:VolSCO,volume,-12dB;
-[pfw_test_callback] id:0 params:VolMedia,volume,-12dB;
-ret 0
-pfw>
+pfw> dump         //Print dump information.
+pfw> setint persist.media.MediaVolume 7     //Set the MediaVolume value to 7.
 ```
