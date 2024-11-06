@@ -16,6 +16,8 @@
 
 if(CONFIG_LIB_PFW)
 
+  nuttx_add_prebuilt(BIN_TARGETS libpfw EXPORT_FILES include)
+
   # ############################################################################
   # Include Directory
   # ############################################################################
@@ -33,9 +35,9 @@ if(CONFIG_LIB_PFW)
   # Library Configuration
   # ############################################################################
 
-  nuttx_add_library(libpfw STATIC)
-  target_sources(libpfw PRIVATE ${CSRCS})
-  target_include_directories(libpfw PUBLIC ${INCDIR})
+  nuttx_library_ifndef(SKIP_PREBUILT libpfw)
+  nuttx_sources(${CSRCS})
+  nuttx_include_directories(${INCDIR})
 
   set_property(
     TARGET nuttx
