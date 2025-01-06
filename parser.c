@@ -609,7 +609,7 @@ int pfw_parse_criteria(pfw_context_t* ctx, pfw_vector_t** p)
             break;
         else if (ret < 0) {
             PFW_DEBUG("Invalid %dth criterion\n", nb);
-            return ret;
+            goto err;
         }
 
         LIST_INIT(&criterion->listeners);
@@ -617,9 +617,18 @@ int pfw_parse_criteria(pfw_context_t* ctx, pfw_vector_t** p)
         ret = pfw_vector_append(p, criterion);
         if (ret < 0) {
             pfw_free_criterion(criterion);
-            return ret;
+            goto err;
         }
     }
 
     return nb;
+
+err:
+    while (nb-- > 0) {
+        criterion = pfw_vector_get(*p, nb);
+        pfw_free_criterion(criterion);
+    }
+    pfw_vector_free(*p);
+    *p = NULL;
+    return ret;
 }
