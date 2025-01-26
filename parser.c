@@ -328,7 +328,7 @@ static int pfw_parse_config(pfw_context_t* ctx, pfw_config_t** pc)
     pfw_rule_t* rule = NULL;
     pfw_act_t* act;
     char* word;
-    int ret, nb;
+    int ret;
 
     ret = pfw_context_get_depth(ctx);
     if (ret != 1)
@@ -362,7 +362,7 @@ static int pfw_parse_config(pfw_context_t* ctx, pfw_config_t** pc)
 
     /* config acts. */
 
-    for (nb = 0;; nb++) {
+    while (1) {
         ret = pfw_parse_act(ctx, &act);
         if (ret == EOF)
             break;
