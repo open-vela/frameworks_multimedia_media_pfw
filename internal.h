@@ -281,8 +281,6 @@ int pfw_parse_settings(pfw_context_t* ctx, pfw_vector_t** p);
 bool pfw_sanitize_criteria(pfw_system_t* system);
 bool pfw_sanitize_settings(pfw_system_t* system);
 
-void* pfw_plugin_register(pfw_system_t* system, pfw_plugin_def_t* def);
-
 /* Criterion functions */
 
 bool pfw_rule_match(pfw_rule_t* rule);

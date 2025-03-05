@@ -52,7 +52,7 @@ typedef struct pfw_plugin_def_t {
  ****************************************************************************/
 
 void* pfw_create(const char* criteria, const char* settings,
-    pfw_plugin_def_t* defs, int nb, pfw_load_t on_load,
+    const pfw_plugin_def_t* defs, int nb, pfw_load_t on_load,
     pfw_save_t on_save, void* cookie);
 void pfw_apply(void* handle);
 void pfw_destroy(void* handle, pfw_release_t on_release);
