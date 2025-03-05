@@ -150,7 +150,7 @@ void pfw_apply(void* handle)
     pthread_mutex_unlock(&system->mutex);
 }
 
-void* pfw_plugin_register(pfw_system_t* system, pfw_plugin_def_t* def)
+static void* pfw_plugin_register(pfw_system_t* system, const pfw_plugin_def_t* def)
 {
     pfw_plugin_t* plugin;
     int ret = -ENOMEM;
@@ -184,7 +184,7 @@ err1:
 }
 
 void* pfw_create(const char* criteria, const char* settings,
-    pfw_plugin_def_t* defs, int nb, pfw_load_t on_load,
+    const pfw_plugin_def_t* defs, int nb, pfw_load_t on_load,
     pfw_save_t on_save, void* cookie)
 {
     pfw_system_t* system;
