@@ -8,7 +8,8 @@
 - 在 `PFW` 配置文件中，我们会定义状态机中有哪些状态，每个状态成立的条件，用于判断的变量。
 - 回调函数则构成了状态机的动作。
 
-![pfw 框架图](../images/pfw/pfw.jpg)
+![pfw 框架图](https://github.com/open-vela/frameworks_multimedia_media/blob/dev/images/pfw/pfw.jpg?raw=true)
+
 
 ## **项目目录**
 
