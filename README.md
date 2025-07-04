@@ -9,7 +9,7 @@
 - In the `PFW` configuration file, we will define which states are in the state machine, the conditions for each state to be established, and the variables used for judgment.
 - The callback function constitutes the action of the state machine.
 
-![pfw 框架图](https://github.com/open-vela/frameworks_multimedia_media/blob/dev/images/pfw/pfw.jpg?raw=true)
+![pfw 框架图](image/pfw.jpg)
 
 ## **Project Directory**
 ```tree
