@@ -9,7 +9,7 @@ Media Policy uses PFW to **construct routes**, **audio policies**, and various o
 - In the PFW configuration file, we define the states in the state machine, the conditions under which each state is valid, and the variables used for evaluation.
 - The callback functions constitute the actions of the state machine.
 
-![pfw 框架图](../images/pfw/pfw.jpg)
+![pfw 框架图](images/pfw.jpg)
 
 ## **Project Directory**
 ```tree
