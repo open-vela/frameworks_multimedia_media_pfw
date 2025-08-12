@@ -9,7 +9,7 @@
 - In the `PFW` configuration file, we will define which states are in the state machine, the conditions for each state to be established, and the variables used for judgment.
 - The callback function constitutes the action of the state machine.
 
-![pfw 框架图](../images/pfw/pfw.jpg)
+![pfw 框架图](images/pfw.jpg)
 
 ## **Project Directory**
 ```tree
